@@ -1,1 +1,1 @@
-# cnr_scene_spawner
+# cnr_scene_manager
