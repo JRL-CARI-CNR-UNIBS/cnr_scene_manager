@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<launch>
+
+<!--  Load parameters in cnr_param server-->
+<node pkg="cnr_scene_manager"
+type="load_params.sh" name="load_params"
+args="scene.yaml"
+output="screen">
+</node>
+
+<!-- Launch the cell -->
+<include file="$(find cartesian_moveit_config)/launch/demo.launch"> </include>
+
+<!-- Load the scene -->
+<node name="cnr_tf_named_object_loader_node" pkg="cnr_tf_named_object_loader" type="cnr_tf_named_object_loader_node" output="screen">
+        <param name="timeout" value="10.0" />
+</node>
+<!--<node pkg="cnr_scene_manager" name="cnr_scene_manager" type="cnr_scene_manager" output="screen">
+        <param name="param_ns" type="string" value="/cnr_scene_manager_test"/>
+</node>-->
+
+</launch>
+<!--          launch-prefix="gdb -ex run -X-args" >-->

@@ -6,6 +6,8 @@ project(cnr_scene_manager)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED On)
 
+set(CMAKE_BUILD_TYPE Debug)
+
 ### 
 find_package(cnr_param REQUIRED)
 find_package(cnr_logger REQUIRED)
@@ -35,11 +37,21 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(${PROJECT_NAME}_node src/cnr_scene_manager_node.cpp)
-add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_executable(${PROJECT_NAME} src/cnr_scene_manager_node.cpp)
+add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(${PROJECT_NAME}_node
+target_link_libraries(${PROJECT_NAME}
+  ${catkin_LIBRARIES}
+  cnr_param::cnr_param
+  cnr_logger::cnr_logger
+)
+
+add_executable(test_scene_manager src/test.cpp)
+add_dependencies(test_scene_manager ${test_scene_manager_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+## Specify libraries to link a library or executable target against
+target_link_libraries(test_scene_manager
   ${catkin_LIBRARIES}
   cnr_param::cnr_param
   cnr_logger::cnr_logger
@@ -51,7 +63,7 @@ target_link_libraries(${PROJECT_NAME}_node
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
-install(TARGETS ${PROJECT_NAME}_node
+install(TARGETS ${PROJECT_NAME}
    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

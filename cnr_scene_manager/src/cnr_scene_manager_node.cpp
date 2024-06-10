@@ -18,7 +18,7 @@
 #define REMOVE_OBJ_SERVICE "remove_objects"
 
 using namespace  cnr_tf_named_object_loader;
-using color_t = moveit_msgs::ObjectColor;
+using color_t = std_msgs::ColorRGBA;
 
 /**
  * @brief The object_type_t struct represents a type of object that can be loaded into the scene
@@ -29,8 +29,8 @@ public:
   bool use_mesh_;
   color_t color_;
   std::string id_;
-  shape_msgs::Mesh mesh_;                //if mesh, no primitive
-  shape_msgs::SolidPrimitive primitive_; //if primitive, no mesh
+  shape_msgs::Mesh mesh_;                // if mesh, no primitive
+  shape_msgs::SolidPrimitive primitive_; // if primitive, no mesh
   Eigen::Affine3d rt_matrix_;            // roto-translation matrix of the mesh/primitive respect to the object reference frame
 };
 
@@ -58,7 +58,7 @@ std::map<std::string,registered_object_t> registered_object_types_;
 /**
  * @brief scene_manager_ is the cnr_tf_named_object_loader::TFNamedObjectsManager which manages the add, remove, move services in the scene
  */
-std::shared_ptr<cnr_tf_named_object_loader::TFNamedObjectsManager> scene_manager_;
+std::shared_ptr<TFNamedObjectsManager> scene_manager_;
 
 /**
  * @brief register_type registers a single object type given the YAML::Node
@@ -91,11 +91,10 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
     }
   }
 
-  r_obj.obj_.color_.id = id;
-  r_obj.obj_.color_.color.r = rgba.at(0);
-  r_obj.obj_.color_.color.g = rgba.at(1);
-  r_obj.obj_.color_.color.b = rgba.at(2);
-  r_obj.obj_.color_.color.a = rgba.at(3);
+  r_obj.obj_.color_.r = rgba.at(0);
+  r_obj.obj_.color_.g = rgba.at(1);
+  r_obj.obj_.color_.b = rgba.at(2);
+  r_obj.obj_.color_.a = rgba.at(3);
 
   /********************* RT-MATRIX *****************************/
 
@@ -143,6 +142,7 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
   }
 
   /********************* MESH/PRIMITIVE *****************************/
+
   r_obj.obj_.use_mesh_ = false;
 
   if(yaml_node["mesh"])
@@ -239,9 +239,17 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
  * @return true if everything went well, false otherwise
  */
 bool register_object_types(const std::string& param_ns)
-{
+{  
   std::string w;
   std::string ns = param_ns+OBJS_NS;
+
+  std::string text = "REGISTERING OBJECT TYPES FROM "+ns;
+  std::string header = "=========================================================================================";
+
+  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header);
+  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<std::setw((header.length()-text.length())/2+text.length())<<text);
+  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header);
+
   if(cnr::param::has(ns,w))
   {
     YAML::Node objects_geometries;
@@ -253,30 +261,31 @@ bool register_object_types(const std::string& param_ns)
 
     if(not objects_geometries.IsMap())
     {
-      CNR_ERROR(logger_, ns<<" should be a map");
+      CNR_ERROR(logger_, ns<<" has type "<<objects_geometries.Type()<<", while it should be a map (type "<<YAML::NodeType::Map<<")");
       return false;
     }
 
     size_t dim;
     std::string id;
-    for(YAML::const_iterator it=objects_geometries.begin();it != objects_geometries.end();++it)
+    for(YAML::const_iterator it = objects_geometries.begin(); it != objects_geometries.end(); ++it)
     {
       registered_object_t r_obj;
-      YAML::Node yaml_node = *it;
-
       id = it->first.as<std::string>();
-      dim = registered_object_types_.size();
-
-      if(register_type(yaml_node,id,r_obj))
+      if(register_type(it->second,id,r_obj))
       {
+        dim = registered_object_types_.size();
+
         registered_object_types_.insert(std::pair<std::string,registered_object_t>(r_obj.obj_.id_,r_obj));
 
         if(registered_object_types_.size() == dim)
           CNR_WARN(logger_, "Cannot add multiple objects with ID: "<<id);
+        else
+          CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<"\t- "<<id<<" registered");
       }
       else
         CNR_ERROR(logger_, "Cannot register object with ID: "<<id);
     }
+    CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header);
   }
   else
   {
@@ -314,6 +323,20 @@ bool instantiate_registered_obj(const std::map<std::string,registered_object_t>:
 
   tf::poseEigenToMsg(rt_matrix_absolute,absolute_pose_msg);
 
+  Eigen::Vector3d pos(absolute_pose_msg.position.x,
+                      absolute_pose_msg.position.y,
+                      absolute_pose_msg.position.z);
+
+  Eigen::Vector4d orient(absolute_pose_msg.orientation.x,
+                         absolute_pose_msg.orientation.y,
+                         absolute_pose_msg.orientation.z,
+                         absolute_pose_msg.orientation.w);
+
+  CNR_WARN(logger_,"position : "<<pos.transpose());
+  CNR_WARN(logger_,"orientation : "<<orient.transpose());
+
+
+
   if(it->second.obj_.use_mesh_)
   {
     obj.meshes.resize(1);
@@ -333,12 +356,13 @@ bool instantiate_registered_obj(const std::map<std::string,registered_object_t>:
 }
 
 /**
- * @brief load_scene_obj reads from a YAML::Node the attributes (type, fram, position, quaternion) to instantiate a registered obeject type
+ * @brief load_scene_obj reads from a YAML::Node the attributes (type, frame, position, quaternion) to instantiate a registered obeject type
  * @param yaml_node the YAML::Node from which the attributes are retrieved
  * @param obj the Moveit collision object created
+ * @param color std_msgs::ColorRGBA color of the object to load
  * @return true if everything went well, false otherwise
  */
-bool load_scene_obj(const YAML::Node& yaml_node, object_t& obj)
+bool load_scene_obj(const YAML::Node& yaml_node, object_t& obj, color_t& color)
 {
   std::string type;
   if(yaml_node["type"])
@@ -362,6 +386,8 @@ bool load_scene_obj(const YAML::Node& yaml_node, object_t& obj)
     CNR_ERROR(logger_,"Object type %s not registered",type.c_str());
     return false;
   }
+
+  color = it->second.obj_.color_;
 
   std::string reference_frame;
   if(yaml_node["frame"])
@@ -442,39 +468,58 @@ bool load_scene_obj(const YAML::Node& yaml_node, object_t& obj)
  */
 bool load_scene(const std::string& param_ns)
 {
-  std::string w;
+  std::string what;
   std::string ns = param_ns+SCENE_NS;
-  if(cnr::param::has(ns,w))
+  std::string text = "LOADING SCENE OBJECTS FROM "+ns;
+  std::string header = "=========================================================================================";
+
+  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header);
+  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<std::setw((header.length()-text.length())/2+text.length())<<text);
+  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header);
+
+  if(cnr::param::has(ns,what))
   {
     YAML::Node scene;
-    if(not cnr::param::get(ns,scene,w))
+    if(not cnr::param::get(ns,scene,what))
     {
-      CNR_ERROR(logger_, "Cannot get scene "<<ns<<"\n"<<w);
+      CNR_ERROR(logger_, "Cannot get scene "<<ns<<"\n"<<what);
       return false;
     }
 
     if(not scene.IsSequence())
     {
-      CNR_ERROR(logger_, ns<<" should be a sequence");
+      CNR_ERROR(logger_, ns<<" has type "<<scene.Type()<<", while it should be a sequence (type "<<YAML::NodeType::Sequence<<")");
       return false;
     }
 
-    objects_t scene_objs;
+    std::vector<color_t> colors;
+    tf_named_objects_t scene_objs;
     for(YAML::iterator it = scene.begin(); it != scene.end(); ++it)
     {
+      color_t color;
       object_t scene_obj;
-      if(load_scene_obj(*it,scene_obj))
-        scene_objs.push_back(std::move(scene_obj));
+      if(load_scene_obj(*it,scene_obj,color))
+      {
+        colors.push_back(std::move(color));
+        scene_objs.emplace_back(scene_obj);
+        CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<"\t- "<<scene_objs.back().id<<" loaded");
+      }
       else
         CNR_ERROR(logger_,"Cannot load the %s-th object into the scene",std::distance(scene.begin(),it));
+    }
+    CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header);
+
+    if(not scene_manager_->addNamedTFObjects(scene_objs,10.0,colors,what))
+    {
+      CNR_ERROR(logger_,"Error in adding the objects to the scene\n%s", what.c_str());
+      return false;
     }
   }
   else
   {
-    CNR_ERROR(logger_, ns<<" not available\n"<<w);
+    CNR_ERROR(logger_, ns<<" not available\n"<<what);
     return false;
   }
-
   return true;
 }
 
@@ -488,14 +533,15 @@ bool add(cnr_scene_manager_msgs::AddObjects::Request& req,
          cnr_scene_manager_msgs::AddObjects::Response& res)
 {
   CNR_INFO(logger_,"=================================================================");
-  CNR_INFO(logger_,"==                ADD OBJECTS REQUEST RECEIVED!               ===");
+  CNR_INFO(logger_,"===               ADD OBJECTS REQUEST RECEIVED!               ===");
   CNR_INFO(logger_,"=================================================================");
 
   res.ids.resize(req.objects.size());
 
   std::string what;
+  std::vector<color_t> colors;
+  tf_named_objects_t objs_to_add;
   std::map<std::string,registered_object_t>::iterator it;
-  cnr_tf_named_object_loader::tf_named_objects_t objs_to_add;
 
   for(unsigned int i=0; req.objects.size(); i++)
   {
@@ -513,7 +559,8 @@ bool add(cnr_scene_manager_msgs::AddObjects::Request& req,
       res.ids[i] = cobj.id;
 
       cobj.operation = object_t::ADD;
-      objs_to_add.push_back(std::move(cobj));
+      objs_to_add.emplace_back(cobj);
+      colors.push_back(it->second.obj_.color_);
     }
     else
     {
@@ -523,7 +570,7 @@ bool add(cnr_scene_manager_msgs::AddObjects::Request& req,
     }
   }
 
-  if(not scene_manager_->addNamedTFObjects(objs_to_add, req.timeout, what))
+  if(not scene_manager_->addNamedTFObjects(objs_to_add,req.timeout,colors,what))
   {
     CNR_ERROR(logger_,"Error in adding the objects to the scene\n%s", what.c_str());
     res.success = false;
@@ -578,8 +625,26 @@ int main(int argc, char** argv)
   std::string logger_file = package_path+"/config/logger_param.yaml";
   logger_ = std::make_shared<cnr_logger::TraceLogger>("cnr_scene_manager_logger",logger_file);
 
-  scene_manager_.reset(new cnr_tf_named_object_loader::TFNamedObjectsManager());
+  scene_manager_.reset(new TFNamedObjectsManager());
 
+  std::string param_ns = "";
+  ros::param::get("~/param_ns",param_ns);
+
+  // Register the available object types listed under param_ns/OBJS_NS parameter
+  if(not register_object_types(param_ns))
+  {
+    CNR_ERROR(logger_,"Cannot register object types");
+    return 1;
+  }
+
+  // Load the scene objects listed under param_ns/SCENE_NS parameter
+  if(not load_scene(param_ns))
+  {
+    CNR_ERROR(logger_,"Cannot load scene objects");
+    return 1;
+  }
+
+  // Declare services
   ros::ServiceServer add_service = n.advertiseService(ADD_OBJ_SERVICE, add);
   ROS_INFO("Ready to add objects to the scene");
 
