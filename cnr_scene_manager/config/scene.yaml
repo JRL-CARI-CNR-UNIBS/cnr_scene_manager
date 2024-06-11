@@ -1,8 +1,29 @@
 cnr_scene_manager_test:
     object_geometries:
-        sphere: {sphere: 0.1, color: [1,0.0,0.0,0.5], position: [0.0,0.0,0.0], quaternion: [0, 0, 0, 1]}
-        box       : {box: [0.2, 0.2, 0.45], color: [0.75,0.75,0.75,1], position: [0.0,0.0,0.0], quaternion: [0, 0, 0, 1]}
-        plane      : {box: [5.0, 5.0, 0.10], color: [0.75,0.75,0.75,1], position: [0.0,0.0,0.0], quaternion: [0, 0, 0, 1]}
-#      sidewall   : {mesh: "package://cnr_scene_manager/example_meshes/SidewallPanel.stl", color: [255,0,0,1]}
+        #sphere->radius
+        sphere_obj: {sphere: 0.1, color: [1,0.0,0.0,1], position: [0.0,0.0,0.0], quaternion: [0, 0, 0, 1]}
+
+        #box->box_x,box_y,box_z
+        box_obj: {box: [0.2, 0.2, 0.45], color: [0,1,0,1], position: [0.0,0.0,0.0], quaternion: [0, 0, 0, 1]}
+
+        #cylinder->#cylinder_height,cylinder_radius
+        cylinder_obj: {cylinder: [1, 0.05], color: [0,0,1,1], position: [0.0,0.0,0.0], quaternion: [0, 0, 0, 1]}
+
+        #cone->cone_height,cone_radius
+        cone_obj: {cone: [0.7, 0.1], color: [0.5,0.1,0.1,1], position: [0.0,0.0,0.0], quaternion: [0, 0, 0, 1]}
+
+        #mesh
+        sidewall: {mesh: "package://cnr_scene_manager/example_meshes/SidewallPanel.stl", color: [0.1,0.5,0.1,1.0], position: [0.0,0.0,0.0], quaternion: [1, 0, 0, 1], scale: [0.5,0.5,0.5]}
+
+        sphere_blue: {sphere: 0.1, color: [0.0,0.0,1.0,0.5], position: [0.0,0.0,0.0], quaternion: [0, 0, 0, 1]}
+        plane: {box: [5.0, 5.0, 0.10], color: [0.75,0.75,0.75,1], position: [0.0,0.0,0.0], quaternion: [0, 0, 0, 1]}
+
     scene_objects:
-        - {type: "box", frame: "world", position: [0.5,0.5,0.5], quaternion: [0, 0, 0, 1]}
+        - {type: "sphere_obj", frame: "world", position: [2,0.5,0.5], quaternion: [0, 0, 0, 1]}
+        - {type: "sphere_blue", frame: "world", position: [2,0.5,1], quaternion: [0, 0, 0, 1]}
+        - {type: "box_obj", frame: "world", position: [0.5,0.5,0.5], quaternion: [0, 0, 0, 1]}
+        - {type: "cylinder_obj", frame: "world", position: [0.7,0.7,0.7], quaternion: [0, 0, 0, 1]}
+        - {type: "cone_obj", frame: "world", position: [1,0.5,0.5], quaternion: [0, 0, 0, 1]}
+        - {type: "plane", frame: "world", position: [0,0,-0.10], quaternion: [0, 0, 0, 1]}
+        - {type: "sidewall", frame: "world", position: [2,2,0.5], quaternion: [0, 0, 0, 1]}
+

@@ -26,26 +26,46 @@ int main(int argc, char** argv)
   object_t obj;
   obj.id = "obj_test";
   obj.header.frame_id = "world";
-  obj.pose.position.x = obj.pose.position.y = obj.pose.position.z = 1;
-  obj.pose.orientation.x = obj.pose.orientation.y = obj.pose.orientation.z = 0;
+  obj.header.stamp = ros::Time::now();
+
+  obj.pose.position.x = 1;
+  obj.pose.position.y = 1;
+  obj.pose.position.z = 1;
+
+  obj.pose.orientation.x = 0;
+  obj.pose.orientation.y = 0;
+  obj.pose.orientation.z = 0;
   obj.pose.orientation.w = 1;
+
+  shape_msgs::SolidPrimitive shape;
+  shape.type = shape_msgs::SolidPrimitive::SPHERE;
+  shape.dimensions.resize(1); shape.dimensions[0] = 0.5;
+
+  std::vector<shape_msgs::SolidPrimitive> primitive_v;
+  primitive_v.push_back(shape);
+
+  obj.primitives = primitive_v;
+
+  geometry_msgs::Pose pose_msg;
+  pose_msg.position.x = 0;
+  pose_msg.position.y = 0;
+  pose_msg.position.z = 0;
+  pose_msg.orientation.x = 0;
+  pose_msg.orientation.y = 0;
+  pose_msg.orientation.z = 0;
+  pose_msg.orientation.w = 1;
+
+  obj.primitive_poses.clear();
+  obj.primitive_poses.push_back(pose_msg);
+
   obj.operation = obj.ADD;
 
-  std::vector<shape_msgs::SolidPrimitive> prim;
-  shape_msgs::SolidPrimitive sf;
-  sf.type = shape_msgs::SolidPrimitive::SPHERE;
-  sf.dimensions.resize(1); sf.dimensions[0] = 2;
-  prim.push_back(sf);
-
-  obj.primitives = prim;
-  geometry_msgs::Pose pose_msg;
-
   std::string w;
-  tf_named_objects_t t;
-  t.emplace_back(obj);
-  scene_manager->addNamedTFObjects(t,10,w);
+  tf_named_objects_t tf_objects;
+  tf_objects.emplace_back(obj);
 
-  ros::spin();
+  if(not scene_manager->addNamedTFObjects(tf_objects,0.1,w))
+    ROS_ERROR_STREAM("error: \n"<<w);
 
   return 0;
 }

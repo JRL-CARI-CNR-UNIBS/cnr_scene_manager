@@ -32,6 +32,7 @@ public:
   shape_msgs::Mesh mesh_;                // if mesh, no primitive
   shape_msgs::SolidPrimitive primitive_; // if primitive, no mesh
   Eigen::Affine3d rt_matrix_;            // roto-translation matrix of the mesh/primitive respect to the object reference frame
+  geometry_msgs::Pose rt_pose_;          // roto-translation pose msg of the mesh/primitive respect to the object reference frame
 };
 
 /**
@@ -99,47 +100,49 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
   /********************* RT-MATRIX *****************************/
 
   r_obj.obj_.rt_matrix_ .setIdentity();
-  if(yaml_node["offset_quaternion"])
+  if(yaml_node["quaternion"])
   {
-    std::vector<double> offset_quaternion;
+    std::vector<double> quaternion;
     try {
-      offset_quaternion = yaml_node["offset_quaternion"].as<std::vector<double>>();
+      quaternion = yaml_node["quaternion"].as<std::vector<double>>();
     } catch (const YAML::BadConversion& e) {
-      CNR_ERROR(logger_,"offset_quaternion should be an array of 4 double (i,j,k,w)");
+      CNR_ERROR(logger_,"quaternion should be an array of 4 double (i,j,k,w)");
       return false;
     }
 
-    if(offset_quaternion.size() != 4)
+    if(quaternion.size() != 4)
     {
-      CNR_ERROR(logger_,"offset_quaternion should be an array of 4 double (i,j,k,w)");
+      CNR_ERROR(logger_,"quaternion should be an array of 4 double (i,j,k,w)");
       return false;
     }
 
-    Eigen::Quaterniond q(offset_quaternion.at(3),offset_quaternion.at(0),offset_quaternion.at(1),offset_quaternion.at(2));
+    Eigen::Quaterniond q(quaternion.at(3),quaternion.at(0),quaternion.at(1),quaternion.at(2));
     q.normalize();
     r_obj.obj_.rt_matrix_=q;
   }
 
-  if(yaml_node["offset"])
+  if(yaml_node["position"])
   {
-    std::vector<double> offset;
+    std::vector<double> position;
     try {
-      offset = yaml_node["offset"].as<std::vector<double>>();
+      position = yaml_node["position"].as<std::vector<double>>();
     } catch (const YAML::BadConversion& e) {
-      CNR_ERROR(logger_,"offset should be an array of 3 double (x,y,z)");
+      CNR_ERROR(logger_,"position should be an array of 3 double (x,y,z)");
       return false;
     }
 
-    if(offset.size() != 3)
+    if(position.size() != 3)
     {
-      CNR_ERROR(logger_,"offset should be an array of 3 double (x,y,z)");
+      CNR_ERROR(logger_,"position should be an array of 3 double (x,y,z)");
       return false;
     }
 
-    r_obj.obj_.rt_matrix_.translation()(0)=offset.at(0);
-    r_obj.obj_.rt_matrix_.translation()(1)=offset.at(1);
-    r_obj.obj_.rt_matrix_.translation()(2)=offset.at(2);
+    r_obj.obj_.rt_matrix_.translation()(0)=position.at(0);
+    r_obj.obj_.rt_matrix_.translation()(1)=position.at(1);
+    r_obj.obj_.rt_matrix_.translation()(2)=position.at(2);
   }
+
+  tf::poseEigenToMsg(r_obj.obj_.rt_matrix_,r_obj.obj_.rt_pose_);
 
   /********************* MESH/PRIMITIVE *****************************/
 
@@ -204,9 +207,9 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
 
     r_obj.obj_.primitive_.type = shape_msgs::SolidPrimitive::BOX;
     r_obj.obj_.primitive_.dimensions.resize(3);
-    r_obj.obj_.primitive_.dimensions[0] = size.at(0);
-    r_obj.obj_.primitive_.dimensions[1] = size.at(1);
-    r_obj.obj_.primitive_.dimensions[2] = size.at(2);
+    r_obj.obj_.primitive_.dimensions[r_obj.obj_.primitive_.BOX_X] = size.at(0);
+    r_obj.obj_.primitive_.dimensions[r_obj.obj_.primitive_.BOX_Y] = size.at(1);
+    r_obj.obj_.primitive_.dimensions[r_obj.obj_.primitive_.BOX_Z] = size.at(2);
 
     return true;
   }
@@ -222,7 +225,53 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
 
     r_obj.obj_.primitive_.type = shape_msgs::SolidPrimitive::SPHERE;
     r_obj.obj_.primitive_.dimensions.resize(1);
-    r_obj.obj_.primitive_.dimensions[0] = radius;
+    r_obj.obj_.primitive_.dimensions[r_obj.obj_.primitive_.SPHERE_RADIUS] = radius;
+
+    return true;
+  }
+  else if(yaml_node["cylinder"])
+  {
+    std::vector<double> size;
+    try {
+      size = yaml_node["cylinder"].as<std::vector<double>>();
+    } catch (const YAML::BadConversion& e) {
+      CNR_ERROR(logger_,"cylinder should be an array of 2 double");
+      return false;
+    }
+
+    if(size.size() != 2)
+    {
+      CNR_ERROR(logger_,"cylinder should be an array of 2 double");
+      return false;
+    }
+
+    r_obj.obj_.primitive_.type = shape_msgs::SolidPrimitive::CYLINDER;
+    r_obj.obj_.primitive_.dimensions.resize(2);
+    r_obj.obj_.primitive_.dimensions[r_obj.obj_.primitive_.CYLINDER_HEIGHT] = size.at(0);
+    r_obj.obj_.primitive_.dimensions[r_obj.obj_.primitive_.CYLINDER_RADIUS] = size.at(1);
+
+    return true;
+  }
+  else if(yaml_node["cone"])
+  {
+    std::vector<double> size;
+    try {
+      size = yaml_node["cone"].as<std::vector<double>>();
+    } catch (const YAML::BadConversion& e) {
+      CNR_ERROR(logger_,"cone should be an array of 2 double");
+      return false;
+    }
+
+    if(size.size() != 2)
+    {
+      CNR_ERROR(logger_,"cone should be an array of 2 double");
+      return false;
+    }
+
+    r_obj.obj_.primitive_.type = shape_msgs::SolidPrimitive::CONE;
+    r_obj.obj_.primitive_.dimensions.resize(2);
+    r_obj.obj_.primitive_.dimensions[r_obj.obj_.primitive_.CONE_HEIGHT] = size.at(0);
+    r_obj.obj_.primitive_.dimensions[r_obj.obj_.primitive_.CONE_RADIUS] = size.at(1);
 
     return true;
   }
@@ -246,9 +295,9 @@ bool register_object_types(const std::string& param_ns)
   std::string text = "REGISTERING OBJECT TYPES FROM "+ns;
   std::string header = "=========================================================================================";
 
-  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header);
-  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<std::setw((header.length()-text.length())/2+text.length())<<text);
-  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header);
+  CNR_INFO(logger_,cnr_logger::BG()<<header);
+  CNR_INFO(logger_,cnr_logger::BG()<<std::setw((header.length()-text.length())/2+text.length())<<text);
+  CNR_INFO(logger_,cnr_logger::BG()<<header);
 
   if(cnr::param::has(ns,w))
   {
@@ -280,12 +329,13 @@ bool register_object_types(const std::string& param_ns)
         if(registered_object_types_.size() == dim)
           CNR_WARN(logger_, "Cannot add multiple objects with ID: "<<id);
         else
-          CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<"\t- "<<id<<" registered");
+          CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::G()<<"\t- "<<cnr_logger::W()<<id
+                   <<cnr_logger::RESET()<<cnr_logger::G()<<" registered");
       }
       else
         CNR_ERROR(logger_, "Cannot register object with ID: "<<id);
     }
-    CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header);
+    CNR_INFO(logger_,cnr_logger::BG()<<header);
   }
   else
   {
@@ -315,26 +365,25 @@ bool instantiate_registered_obj(const std::map<std::string,registered_object_t>:
   obj.operation = object_t::ADD;
   obj.header.frame_id = reference_frame;
 
-  Eigen::Affine3d rt_matrix_frame2obj;
-  tf::poseMsgToEigen(pose_msg,rt_matrix_frame2obj);
+  /* === Include primitive/mesh relative pose into the pose of the object's reference frame === */
 
-  geometry_msgs::Pose absolute_pose_msg;
-  Eigen::Affine3d rt_matrix_absolute = rt_matrix_frame2obj*it->second.obj_.rt_matrix_;
+  //  Eigen::Affine3d rt_matrix_frame2obj;
+  //  tf::poseMsgToEigen(pose_msg,rt_matrix_frame2obj);
 
-  tf::poseEigenToMsg(rt_matrix_absolute,absolute_pose_msg);
+  //  geometry_msgs::Pose absolute_pose_msg;
+  //  Eigen::Affine3d rt_matrix_absolute = rt_matrix_frame2obj*it->second.obj_.rt_matrix_;
 
-  Eigen::Vector3d pos(absolute_pose_msg.position.x,
-                      absolute_pose_msg.position.y,
-                      absolute_pose_msg.position.z);
+  //  tf::poseEigenToMsg(rt_matrix_absolute,absolute_pose_msg);
 
-  Eigen::Vector4d orient(absolute_pose_msg.orientation.x,
-                         absolute_pose_msg.orientation.y,
-                         absolute_pose_msg.orientation.z,
-                         absolute_pose_msg.orientation.w);
+  //  obj.pose = absolute_pose_msg;
 
-  CNR_WARN(logger_,"position : "<<pos.transpose());
-  CNR_WARN(logger_,"orientation : "<<orient.transpose());
+  /* ========================================================================================== */
 
+  /* =========================== Otherwise keep those poses separate ========================== */
+
+  obj.pose = pose_msg;
+
+  /* ========================================================================================== */
 
 
   if(it->second.obj_.use_mesh_)
@@ -342,14 +391,14 @@ bool instantiate_registered_obj(const std::map<std::string,registered_object_t>:
     obj.meshes.resize(1);
     obj.mesh_poses.resize(1);
     obj.meshes[0] = it->second.obj_.mesh_;
-    obj.mesh_poses[0] = absolute_pose_msg;
+    obj.mesh_poses[0] = it->second.obj_.rt_pose_;
   }
   else
   {
     obj.primitives.resize(1);
     obj.primitive_poses.resize(1);
     obj.primitives[0] = it->second.obj_.primitive_;
-    obj.primitive_poses[0] = pose_msg;
+    obj.primitive_poses[0] = it->second.obj_.rt_pose_;
   }
 
   return true;
@@ -473,9 +522,9 @@ bool load_scene(const std::string& param_ns)
   std::string text = "LOADING SCENE OBJECTS FROM "+ns;
   std::string header = "=========================================================================================";
 
-  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header);
-  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<std::setw((header.length()-text.length())/2+text.length())<<text);
-  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header);
+  CNR_INFO(logger_,cnr_logger::BG()<<header);
+  CNR_INFO(logger_,cnr_logger::BG()<<std::setw((header.length()-text.length())/2+text.length())<<text);
+  CNR_INFO(logger_,cnr_logger::BG()<<header);
 
   if(cnr::param::has(ns,what))
   {
@@ -502,12 +551,13 @@ bool load_scene(const std::string& param_ns)
       {
         colors.push_back(std::move(color));
         scene_objs.emplace_back(scene_obj);
-        CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<"\t- "<<scene_objs.back().id<<" loaded");
+        CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::G()<<"\t- "<<cnr_logger::W()<<scene_objs.back().id
+                 <<cnr_logger::RESET()<<cnr_logger::G()<<" loaded");
       }
       else
         CNR_ERROR(logger_,"Cannot load the %s-th object into the scene",std::distance(scene.begin(),it));
     }
-    CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header);
+    CNR_INFO(logger_,cnr_logger::BG()<<header);
 
     if(not scene_manager_->addNamedTFObjects(scene_objs,10.0,colors,what))
     {

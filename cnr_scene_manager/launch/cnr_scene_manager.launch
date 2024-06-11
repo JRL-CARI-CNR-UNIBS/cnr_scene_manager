@@ -13,11 +13,11 @@ output="screen">
 
 <!-- Load the scene -->
 <node name="cnr_tf_named_object_loader_node" pkg="cnr_tf_named_object_loader" type="cnr_tf_named_object_loader_node" output="screen">
-        <param name="timeout" value="10.0" />
+        <param name="timeout" value="0.1" />
 </node>
-<!--<node pkg="cnr_scene_manager" name="cnr_scene_manager" type="cnr_scene_manager" output="screen">
+<node pkg="cnr_scene_manager" name="cnr_scene_manager" type="cnr_scene_manager" output="screen">
         <param name="param_ns" type="string" value="/cnr_scene_manager_test"/>
-</node>-->
+</node>
 
 </launch>
 <!--          launch-prefix="gdb -ex run -X-args" >-->
