@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 4.11.0, 2024-06-11T09:43:13. -->
+<!-- Written by QtCreator 4.11.0, 2024-06-11T15:54:07. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -194,7 +194,7 @@
     <value type="bool" key="RunConfiguration.UseQmlDebugger">false</value>
     <value type="bool" key="RunConfiguration.UseQmlDebuggerAuto">true</value>
     <value type="QString" key="RunConfiguration.WorkingDirectory"></value>
-    <value type="QString" key="RunConfiguration.WorkingDirectory.default">/home/riemann/projects/graph_ros_ws/devel/.private/cnr_scene_manager/lib/cnr_scene_manager</value>
+    <value type="QString" key="RunConfiguration.WorkingDirectory.default">/home/riemann/projects/graph_ros_ws/build/cnr_scene_manager/devel/lib/cnr_scene_manager</value>
    </valuemap>
    <valuemap type="QVariantMap" key="ProjectExplorer.Target.RunConfiguration.1">
     <value type="QString" key="Analyzer.Perf.CallgraphMode">dwarf</value>
@@ -269,7 +269,7 @@
     <value type="bool" key="RunConfiguration.UseQmlDebugger">false</value>
     <value type="bool" key="RunConfiguration.UseQmlDebuggerAuto">true</value>
     <value type="QString" key="RunConfiguration.WorkingDirectory"></value>
-    <value type="QString" key="RunConfiguration.WorkingDirectory.default">/home/riemann/projects/graph_ros_ws/devel/.private/cnr_scene_manager/lib/cnr_scene_manager</value>
+    <value type="QString" key="RunConfiguration.WorkingDirectory.default">/home/riemann/projects/graph_ros_ws/build/cnr_scene_manager/devel/lib/cnr_scene_manager</value>
    </valuemap>
    <value type="int" key="ProjectExplorer.Target.RunConfigurationCount">2</value>
   </valuemap>

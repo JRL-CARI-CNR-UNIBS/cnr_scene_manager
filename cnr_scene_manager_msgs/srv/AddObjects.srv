@@ -1,5 +1,5 @@
 cnr_scene_manager_msgs/Object[] objects
-float32 timeout=10.0
+float32 timeout #default 0.01
 ---
 bool success
 string[] ids

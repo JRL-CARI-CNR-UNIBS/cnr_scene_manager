@@ -582,6 +582,7 @@ bool load_scene(const std::string& param_ns)
 bool add(cnr_scene_manager_msgs::AddObjects::Request& req,
          cnr_scene_manager_msgs::AddObjects::Response& res)
 {
+
   CNR_INFO(logger_,"=================================================================");
   CNR_INFO(logger_,"===               ADD OBJECTS REQUEST RECEIVED!               ===");
   CNR_INFO(logger_,"=================================================================");
@@ -593,7 +594,7 @@ bool add(cnr_scene_manager_msgs::AddObjects::Request& req,
   tf_named_objects_t objs_to_add;
   std::map<std::string,registered_object_t>::iterator it;
 
-  for(unsigned int i=0; req.objects.size(); i++)
+  for(unsigned int i=0; i<req.objects.size(); i++)
   {
     it = registered_object_types_.find(req.objects[i].object_type);
     if(it==registered_object_types_.end())
@@ -610,6 +611,7 @@ bool add(cnr_scene_manager_msgs::AddObjects::Request& req,
 
       cobj.operation = object_t::ADD;
       objs_to_add.emplace_back(cobj);
+
       colors.push_back(it->second.obj_.color_);
     }
     else
@@ -620,7 +622,11 @@ bool add(cnr_scene_manager_msgs::AddObjects::Request& req,
     }
   }
 
-  if(not scene_manager_->addNamedTFObjects(objs_to_add,req.timeout,colors,what))
+  double timeout = 0.01;
+  if(req.timeout)
+    timeout = req.timeout;
+
+  if(not scene_manager_->addNamedTFObjects(objs_to_add,timeout,colors,what))
   {
     CNR_ERROR(logger_,"Error in adding the objects to the scene\n%s", what.c_str());
     res.success = false;
@@ -638,10 +644,14 @@ bool remove(cnr_scene_manager_msgs::RemoveObjects::Request& req,
   CNR_INFO(logger_,"==             REMOVE OBJECTS REQUEST RECEIVED!               ===");
   CNR_INFO(logger_,"=================================================================");
 
+  double timeout = 0.01;
+  if(req.timeout)
+    timeout = req.timeout;
+
   std::string what;
   if(req.obj_ids.empty()) //no objects means reset the scene
   {
-    if(not scene_manager_->resetScene(req.timeout,what))
+    if(not scene_manager_->resetScene(timeout,what))
     {
       CNR_ERROR(logger_,"Error in resetting the scene\n%s", what.c_str());
       res.success = false;
@@ -650,7 +660,7 @@ bool remove(cnr_scene_manager_msgs::RemoveObjects::Request& req,
   }
   else
   {
-    if(not scene_manager_->removeNamedObjects(req.obj_ids,req.timeout,what))
+    if(not scene_manager_->removeNamedObjects(req.obj_ids,timeout,what))
     {
       CNR_ERROR(logger_,"Error in removing the objects from the scene\n%s", what.c_str());
       res.success = false;
@@ -665,7 +675,7 @@ bool remove(cnr_scene_manager_msgs::RemoveObjects::Request& req,
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "cnr_scene_manager");
-  ros::NodeHandle n;
+  ros::NodeHandle pn("~");
   std::string package_name = "cnr_scene_manager";
   std::string package_path = ros::package::getPath(package_name);
 
@@ -695,10 +705,10 @@ int main(int argc, char** argv)
   }
 
   // Declare services
-  ros::ServiceServer add_service = n.advertiseService(ADD_OBJ_SERVICE, add);
+  ros::ServiceServer add_service = pn.advertiseService(ADD_OBJ_SERVICE, add);
   ROS_INFO("Ready to add objects to the scene");
 
-  ros::ServiceServer remove_service = n.advertiseService(REMOVE_OBJ_SERVICE, remove);
+  ros::ServiceServer remove_service = pn.advertiseService(REMOVE_OBJ_SERVICE, remove);
   ROS_INFO("Ready to remove objects from the scene");
 
   ros::spin();
