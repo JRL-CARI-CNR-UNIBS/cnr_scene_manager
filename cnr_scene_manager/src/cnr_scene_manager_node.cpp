@@ -1,16 +1,16 @@
 #include <tf/tf.h>
-#include <ros/ros.h>
+#include "rclcpp/rclcpp.hpp"
 #include <ros/package.h>
 #include <eigen_conversions/eigen_msg.h>
-#include <moveit_msgs/ApplyPlanningScene.h>
+#include <moveit_msgs/srv/apply_planning_scene.hpp>
 #include <geometric_shapes/shape_operations.h>
 
 #include <cnr_param/cnr_param.h>
 #include <cnr_logger/cnr_logger.h>
 #include <cnr_tf_named_object_loader/cnr_tf_named_object_loader.h>
 
-#include <cnr_scene_manager_msgs/AddObjects.h>
-#include <cnr_scene_manager_msgs/RemoveObjects.h>
+#include <cnr_scene_manager_msgs/srv/add_objects.hpp>
+#include <cnr_scene_manager_msgs/srv/remove_objects.hpp>
 
 #define OBJS_NS "/object_geometries"
 #define SCENE_NS "/scene_objects"
@@ -18,7 +18,7 @@
 #define REMOVE_OBJ_SERVICE "remove_objects"
 
 using namespace  cnr_tf_named_object_loader;
-using color_t = std_msgs::ColorRGBA;
+using color_t = std_msgs::msg::ColorRGBA;
 
 /**
  * @brief The object_type_t struct represents a type of object that can be loaded into the scene
@@ -29,10 +29,10 @@ public:
   bool use_mesh_;
   color_t color_;
   std::string id_;
-  shape_msgs::Mesh mesh_;                // if mesh, no primitive
-  shape_msgs::SolidPrimitive primitive_; // if primitive, no mesh
+  shape_msgs::msg::Mesh mesh_;                // if mesh, no primitive
+  shape_msgs::msg::SolidPrimitive primitive_; // if primitive, no mesh
   Eigen::Affine3d rt_matrix_;            // roto-translation matrix of the mesh/primitive respect to the object reference frame
-  geometry_msgs::Pose rt_pose_;          // roto-translation pose msg of the mesh/primitive respect to the object reference frame
+  geometry_msgs::msg::Pose rt_pose_;          // roto-translation pose msg of the mesh/primitive respect to the object reference frame
 };
 
 /**
@@ -184,7 +184,7 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
     shapes::ShapeMsg mesh_msg;
     shapes::constructMsgFromShape(m,mesh_msg);
 
-    r_obj.obj_.mesh_ = boost::get<shape_msgs::Mesh>(mesh_msg);
+    r_obj.obj_.mesh_ = boost::get<shape_msgs::msg::Mesh>(mesh_msg);
     r_obj.obj_.use_mesh_ = true;
 
     return true;
@@ -205,7 +205,7 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
       return false;
     }
 
-    r_obj.obj_.primitive_.type = shape_msgs::SolidPrimitive::BOX;
+    r_obj.obj_.primitive_.type = shape_msgs::msg::SolidPrimitive::BOX;
     r_obj.obj_.primitive_.dimensions.resize(3);
     r_obj.obj_.primitive_.dimensions[r_obj.obj_.primitive_.BOX_X] = size.at(0);
     r_obj.obj_.primitive_.dimensions[r_obj.obj_.primitive_.BOX_Y] = size.at(1);
@@ -223,7 +223,7 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
       return false;
     }
 
-    r_obj.obj_.primitive_.type = shape_msgs::SolidPrimitive::SPHERE;
+    r_obj.obj_.primitive_.type = shape_msgs::msg::SolidPrimitive::SPHERE;
     r_obj.obj_.primitive_.dimensions.resize(1);
     r_obj.obj_.primitive_.dimensions[r_obj.obj_.primitive_.SPHERE_RADIUS] = radius;
 
@@ -245,7 +245,7 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
       return false;
     }
 
-    r_obj.obj_.primitive_.type = shape_msgs::SolidPrimitive::CYLINDER;
+    r_obj.obj_.primitive_.type = shape_msgs::msg::SolidPrimitive::CYLINDER;
     r_obj.obj_.primitive_.dimensions.resize(2);
     r_obj.obj_.primitive_.dimensions[r_obj.obj_.primitive_.CYLINDER_HEIGHT] = size.at(0);
     r_obj.obj_.primitive_.dimensions[r_obj.obj_.primitive_.CYLINDER_RADIUS] = size.at(1);
@@ -268,7 +268,7 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
       return false;
     }
 
-    r_obj.obj_.primitive_.type = shape_msgs::SolidPrimitive::CONE;
+    r_obj.obj_.primitive_.type = shape_msgs::msg::SolidPrimitive::CONE;
     r_obj.obj_.primitive_.dimensions.resize(2);
     r_obj.obj_.primitive_.dimensions[r_obj.obj_.primitive_.CONE_HEIGHT] = size.at(0);
     r_obj.obj_.primitive_.dimensions[r_obj.obj_.primitive_.CONE_RADIUS] = size.at(1);
@@ -354,7 +354,7 @@ bool register_object_types(const std::string& param_ns)
  * @param obj the Moveit collision object created
  * @return true if everything went well, false otherwise
  */
-bool instantiate_registered_obj(const std::map<std::string,registered_object_t>::iterator& it, const std::string& reference_frame, const geometry_msgs::Pose& pose_msg, object_t& obj)
+bool instantiate_registered_obj(const std::map<std::string,registered_object_t>::iterator& it, const std::string& reference_frame, const geometry_msgs::msg::Pose& pose_msg, object_t& obj)
 {
   if(it == registered_object_types_.end())
     return false;
@@ -370,7 +370,7 @@ bool instantiate_registered_obj(const std::map<std::string,registered_object_t>:
   //  Eigen::Affine3d rt_matrix_frame2obj;
   //  tf::poseMsgToEigen(pose_msg,rt_matrix_frame2obj);
 
-  //  geometry_msgs::Pose absolute_pose_msg;
+  //  geometry_msgs::msg::Pose absolute_pose_msg;
   //  Eigen::Affine3d rt_matrix_absolute = rt_matrix_frame2obj*it->second.obj_.rt_matrix_;
 
   //  tf::poseEigenToMsg(rt_matrix_absolute,absolute_pose_msg);
@@ -408,7 +408,7 @@ bool instantiate_registered_obj(const std::map<std::string,registered_object_t>:
  * @brief load_scene_obj reads from a YAML::Node the attributes (type, frame, position, quaternion) to instantiate a registered obeject type
  * @param yaml_node the YAML::Node from which the attributes are retrieved
  * @param obj the Moveit collision object created
- * @param color std_msgs::ColorRGBA color of the object to load
+ * @param color std_msgs::msg::ColorRGBA color of the object to load
  * @return true if everything went well, false otherwise
  */
 bool load_scene_obj(const YAML::Node& yaml_node, object_t& obj, color_t& color)
@@ -498,7 +498,7 @@ bool load_scene_obj(const YAML::Node& yaml_node, object_t& obj, color_t& color)
     return false;
   }
 
-  geometry_msgs::Pose pose_msg;
+  geometry_msgs::msg::Pose pose_msg;
   pose_msg.position.x = position.at(0);
   pose_msg.position.y = position.at(1);
   pose_msg.position.z = position.at(2);
@@ -579,8 +579,8 @@ bool load_scene(const std::string& param_ns)
  * @param res
  * @return
  */
-bool add(cnr_scene_manager_msgs::AddObjects::Request& req,
-         cnr_scene_manager_msgs::AddObjects::Response& res)
+bool add(cnr_scene_manager_msgs::srv::AddObjects::Request& req,
+         cnr_scene_manager_msgs::srv::AddObjects::Response& res)
 {
 
   CNR_INFO(logger_,"=================================================================");
@@ -637,8 +637,8 @@ bool add(cnr_scene_manager_msgs::AddObjects::Request& req,
   return true;
 }
 
-bool remove(cnr_scene_manager_msgs::RemoveObjects::Request& req,
-            cnr_scene_manager_msgs::RemoveObjects::Response& res)
+bool remove(cnr_scene_manager_msgs::srv::RemoveObjects::Request& req,
+            cnr_scene_manager_msgs::srv::RemoveObjects::Response& res)
 {
   CNR_INFO(logger_,"=================================================================");
   CNR_INFO(logger_,"==             REMOVE OBJECTS REQUEST RECEIVED!               ===");
@@ -674,8 +674,9 @@ bool remove(cnr_scene_manager_msgs::RemoveObjects::Request& req,
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "cnr_scene_manager");
-  ros::NodeHandle pn("~");
+  rclcpp::init(argc, argv);
+  auto node = rclcpp::Node::make_shared("cnr_scene_manager");
+  rclcpp::Node pn("~");
   std::string package_name = "cnr_scene_manager";
   std::string package_path = ros::package::getPath(package_name);
 
@@ -706,12 +707,12 @@ int main(int argc, char** argv)
 
   // Declare services
   ros::ServiceServer add_service = pn.advertiseService(ADD_OBJ_SERVICE, add);
-  ROS_INFO("Ready to add objects to the scene");
+  RCLCPP_INFO(rclcpp::get_logger("CnrSceneManager"), "Ready to add objects to the scene");
 
   ros::ServiceServer remove_service = pn.advertiseService(REMOVE_OBJ_SERVICE, remove);
-  ROS_INFO("Ready to remove objects from the scene");
+  RCLCPP_INFO(rclcpp::get_logger("CnrSceneManager"), "Ready to remove objects from the scene");
 
-  ros::spin();
+  rclcpp::spin(node);
 
   return 0;
 }

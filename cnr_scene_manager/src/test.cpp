@@ -1,16 +1,16 @@
 #include <tf/tf.h>
-#include <ros/ros.h>
+#include "rclcpp/rclcpp.hpp"
 #include <ros/package.h>
 #include <eigen_conversions/eigen_msg.h>
-#include <moveit_msgs/ApplyPlanningScene.h>
+#include <moveit_msgs/srv/apply_planning_scene.hpp>
 #include <geometric_shapes/shape_operations.h>
 
 #include <cnr_param/cnr_param.h>
 #include <cnr_logger/cnr_logger.h>
 #include <cnr_tf_named_object_loader/cnr_tf_named_object_loader.h>
 
-#include <cnr_scene_manager_msgs/AddObjects.h>
-#include <cnr_scene_manager_msgs/RemoveObjects.h>
+#include <cnr_scene_manager_msgs/srv/add_objects.hpp>
+#include <cnr_scene_manager_msgs/srv/remove_objects.hpp>
 
 
 using namespace  cnr_tf_named_object_loader;
@@ -18,15 +18,15 @@ using namespace  cnr_tf_named_object_loader;
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "cnr_scene_manager_test");
-  ros::NodeHandle n;
+  rclcpp::init(argc, argv);
+  auto n = rclcpp::Node::make_shared("cnr_scene_manager_test");
 
   std::shared_ptr<TFNamedObjectsManager> scene_manager = std::make_shared<TFNamedObjectsManager>();
 
   object_t obj;
   obj.id = "obj_test";
   obj.header.frame_id = "world";
-  obj.header.stamp = ros::Time::now();
+  obj.header.stamp = rclcpp::Time::now();
 
   obj.pose.position.x = 1;
   obj.pose.position.y = 1;
@@ -37,16 +37,16 @@ int main(int argc, char** argv)
   obj.pose.orientation.z = 0;
   obj.pose.orientation.w = 1;
 
-  shape_msgs::SolidPrimitive shape;
-  shape.type = shape_msgs::SolidPrimitive::SPHERE;
+  shape_msgs::msg::SolidPrimitive shape;
+  shape.type = shape_msgs::msg::SolidPrimitive::SPHERE;
   shape.dimensions.resize(1); shape.dimensions[0] = 0.5;
 
-  std::vector<shape_msgs::SolidPrimitive> primitive_v;
+  std::vector<shape_msgs::msg::SolidPrimitive> primitive_v;
   primitive_v.push_back(shape);
 
   obj.primitives = primitive_v;
 
-  geometry_msgs::Pose pose_msg;
+  geometry_msgs::msg::Pose pose_msg;
   pose_msg.position.x = 0;
   pose_msg.position.y = 0;
   pose_msg.position.z = 0;
