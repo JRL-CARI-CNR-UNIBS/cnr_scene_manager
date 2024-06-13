@@ -21,6 +21,7 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>rosidl_default_generators</buildtool_depend>
 
+
   <build_depend>message_generation</build_depend>
   <build_export_depend>message_generation</build_export_depend>
   <exec_depend>message_runtime</exec_depend>
@@ -41,6 +42,7 @@
   <exec_depend>rclcpp</exec_depend>
   <exec_depend>rosidl_default_runtime</exec_depend>
 
+  <member_of_group>rosidl_interface_packages</member_of_group>
 
 
   <!-- The export tag contains other, unspecified, tags -->
@@ -49,5 +51,4 @@
     <build_type>ament_cmake</build_type>
 
   </export>
-  <member_of_group>rosidl_interface_packages</member_of_group>
 </package>

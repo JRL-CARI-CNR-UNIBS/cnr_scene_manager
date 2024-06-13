@@ -1,7 +1,6 @@
-#include <tf/tf.h>
-#include "rclcpp/rclcpp.hpp"
-#include <ros/package.h>
-#include <eigen_conversions/eigen_msg.h>
+#include <rclcpp/rclcpp.hpp>
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 #include <moveit_msgs/srv/apply_planning_scene.hpp>
 #include <geometric_shapes/shape_operations.h>
 
@@ -31,7 +30,7 @@ public:
   std::string id_;
   shape_msgs::msg::Mesh mesh_;                // if mesh, no primitive
   shape_msgs::msg::SolidPrimitive primitive_; // if primitive, no mesh
-  Eigen::Affine3d rt_matrix_;            // roto-translation matrix of the mesh/primitive respect to the object reference frame
+  Eigen::Affine3d rt_matrix_;                 // roto-translation matrix of the mesh/primitive respect to the object reference frame
   geometry_msgs::msg::Pose rt_pose_;          // roto-translation pose msg of the mesh/primitive respect to the object reference frame
 };
 
@@ -142,7 +141,7 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
     r_obj.obj_.rt_matrix_.translation()(2)=position.at(2);
   }
 
-  tf::poseEigenToMsg(r_obj.obj_.rt_matrix_,r_obj.obj_.rt_pose_);
+  r_obj.obj_.rt_pose_ = tf2::toMsg(r_obj.obj_.rt_matrix_);
 
   /********************* MESH/PRIMITIVE *****************************/
 
@@ -579,35 +578,35 @@ bool load_scene(const std::string& param_ns)
  * @param res
  * @return
  */
-bool add(cnr_scene_manager_msgs::srv::AddObjects::Request& req,
-         cnr_scene_manager_msgs::srv::AddObjects::Response& res)
+void add_obj(const std::shared_ptr<cnr_scene_manager_msgs::srv::AddObjects::Request> req,
+         std::shared_ptr<cnr_scene_manager_msgs::srv::AddObjects::Response> res)
 {
 
   CNR_INFO(logger_,"=================================================================");
   CNR_INFO(logger_,"===               ADD OBJECTS REQUEST RECEIVED!               ===");
   CNR_INFO(logger_,"=================================================================");
 
-  res.ids.resize(req.objects.size());
+  res->ids.resize(req->objects.size());
 
   std::string what;
   std::vector<color_t> colors;
   tf_named_objects_t objs_to_add;
   std::map<std::string,registered_object_t>::iterator it;
 
-  for(unsigned int i=0; i<req.objects.size(); i++)
+  for(unsigned int i=0; i<req->objects.size(); i++)
   {
-    it = registered_object_types_.find(req.objects[i].object_type);
+    it = registered_object_types_.find(req->objects[i].object_type);
     if(it==registered_object_types_.end())
     {
-      CNR_ERROR(logger_,"Object type %s not registered",req.objects[i].object_type.c_str());
-      res.success = false;
-      return false;
+      CNR_ERROR(logger_,"Object type %s not registered",req->objects[i].object_type.c_str());
+      res->success = false;
+      return;
     }
 
     object_t cobj;
-    if(instantiate_registered_obj(it,req.objects[i].pose.header.frame_id,req.objects[i].pose.pose,cobj))
+    if(instantiate_registered_obj(it,req->objects[i].pose.header.frame_id,req->objects[i].pose.pose,cobj))
     {
-      res.ids[i] = cobj.id;
+      res->ids[i] = cobj.id;
 
       cobj.operation = object_t::ADD;
       objs_to_add.emplace_back(cobj);
@@ -616,60 +615,60 @@ bool add(cnr_scene_manager_msgs::srv::AddObjects::Request& req,
     }
     else
     {
-      CNR_ERROR(logger_,"Object type %s cannot be instantiated",req.objects[i].object_type.c_str());
-      res.success = false;
-      return false;
+      CNR_ERROR(logger_,"Object type %s cannot be instantiated",req->objects[i].object_type.c_str());
+      res->success = false;
+      return;
     }
   }
 
   double timeout = 0.01;
-  if(req.timeout)
-    timeout = req.timeout;
+  if(req->timeout)
+    timeout = req->timeout;
 
   if(not scene_manager_->addNamedTFObjects(objs_to_add,timeout,colors,what))
   {
     CNR_ERROR(logger_,"Error in adding the objects to the scene\n%s", what.c_str());
-    res.success = false;
-    return false;
+    res->success = false;
+    return;
   }
 
-  res.success = true;
-  return true;
+  res->success = true;
+  return;
 }
 
-bool remove(cnr_scene_manager_msgs::srv::RemoveObjects::Request& req,
-            cnr_scene_manager_msgs::srv::RemoveObjects::Response& res)
+void remove_obj(const std::shared_ptr<cnr_scene_manager_msgs::srv::RemoveObjects::Request> req,
+            std::shared_ptr<cnr_scene_manager_msgs::srv::RemoveObjects::Response> res)
 {
   CNR_INFO(logger_,"=================================================================");
   CNR_INFO(logger_,"==             REMOVE OBJECTS REQUEST RECEIVED!               ===");
   CNR_INFO(logger_,"=================================================================");
 
   double timeout = 0.01;
-  if(req.timeout)
-    timeout = req.timeout;
+  if(req->timeout)
+    timeout = req->timeout;
 
   std::string what;
-  if(req.obj_ids.empty()) //no objects means reset the scene
+  if(req->obj_ids.empty()) //no objects means reset the scene
   {
     if(not scene_manager_->resetScene(timeout,what))
     {
       CNR_ERROR(logger_,"Error in resetting the scene\n%s", what.c_str());
-      res.success = false;
-      return false;
+      res->success = false;
+      return;
     }
   }
   else
   {
-    if(not scene_manager_->removeNamedObjects(req.obj_ids,timeout,what))
+    if(not scene_manager_->removeNamedObjects(req->obj_ids,timeout,what))
     {
       CNR_ERROR(logger_,"Error in removing the objects from the scene\n%s", what.c_str());
-      res.success = false;
-      return false;
+      res->success = false;
+      return;
     }
   }
 
-  res.success = true;
-  return true;
+  res->success = true;
+  return;
 }
 
 int main(int argc, char** argv)
@@ -678,7 +677,7 @@ int main(int argc, char** argv)
   auto node = rclcpp::Node::make_shared("cnr_scene_manager");
   rclcpp::Node pn("~");
   std::string package_name = "cnr_scene_manager";
-  std::string package_path = ros::package::getPath(package_name);
+  std::string package_path = ament_index_cpp::get_package_share_directory(package_name);
 
   if(package_path.empty())
     throw std::invalid_argument("Failed to get path for package!");
@@ -686,10 +685,11 @@ int main(int argc, char** argv)
   std::string logger_file = package_path+"/config/logger_param.yaml";
   logger_ = std::make_shared<cnr_logger::TraceLogger>("cnr_scene_manager_logger",logger_file);
 
-  scene_manager_.reset(new TFNamedObjectsManager());
+  scene_manager_.reset(new TFNamedObjectsManager(node));
 
-  std::string param_ns = "";
-  ros::param::get("~/param_ns",param_ns);
+  std::string param_ns;
+  node->declare_parameter("~/param_ns", "");
+  node->get_parameter("~/param_ns", param_ns);
 
   // Register the available object types listed under param_ns/OBJS_NS parameter
   if(not register_object_types(param_ns))
@@ -706,13 +706,15 @@ int main(int argc, char** argv)
   }
 
   // Declare services
-  ros::ServiceServer add_service = pn.advertiseService(ADD_OBJ_SERVICE, add);
-  RCLCPP_INFO(rclcpp::get_logger("CnrSceneManager"), "Ready to add objects to the scene");
 
-  ros::ServiceServer remove_service = pn.advertiseService(REMOVE_OBJ_SERVICE, remove);
-  RCLCPP_INFO(rclcpp::get_logger("CnrSceneManager"), "Ready to remove objects from the scene");
+  auto add_service = node->create_service<cnr_scene_manager_msgs::srv::AddObjects>(ADD_OBJ_SERVICE, &add_obj);
+  CNR_INFO(logger_, "Ready to add objects to the scene");
+
+  auto remove_service = node->create_service<cnr_scene_manager_msgs::srv::RemoveObjects>(REMOVE_OBJ_SERVICE, &remove_obj);
+  CNR_INFO(logger_, "Ready to remove objects from the scene");
 
   rclcpp::spin(node);
+  rclcpp::shutdown();
 
   return 0;
 }

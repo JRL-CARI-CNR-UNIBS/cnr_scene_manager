@@ -13,23 +13,22 @@
   <license>TODO</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
-  <build_depend>cnr_tf_named_object_loader</build_depend>
   <build_depend>rclcpp</build_depend>
-  <build_export_depend>cnr_tf_named_object_loader</build_export_depend>
   <build_export_depend>rclcpp</build_export_depend>
-  <exec_depend>cnr_tf_named_object_loader</exec_depend>
   <exec_depend>rclcpp</exec_depend>
 
   <depend>cnr_param</depend>
   <depend>cnr_logger</depend>
-  <depend>tf_conversions</depend>
-  <depend>eigen_conversions</depend>
   <depend>cnr_scene_manager_msgs</depend>
+  <depend>cnr_tf_named_object_loader</depend>
+  <depend>moveit_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_eigen</depend>
+  <depend>geometric_shapes</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- Other tools can request additional information be placed here -->
     <build_type>ament_cmake</build_type>
-
   </export>
 </package>
