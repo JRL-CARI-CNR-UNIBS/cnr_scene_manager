@@ -46,6 +46,8 @@ install(TARGETS
 install(DIRECTORY config example_meshes launch script
     DESTINATION share/${PROJECT_NAME})
 
+ament_export_dependencies(rclcpp moveit_msgs moveit_ros_planning_interface tf2_ros Eigen3 yaml-cpp) # exports dependencies to downstream packages to avoid the the user to call find_package for those dependencies too.    
+
 ament_package()
 
 

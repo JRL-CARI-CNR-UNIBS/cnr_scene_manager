@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 6.0.2, 2024-06-12T17:54:31. -->
+<!-- Written by QtCreator 6.0.2, 2024-06-13T13:51:21. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -104,8 +104,8 @@
 -DCMAKE_PREFIX_PATH:PATH=%{Qt:QT_INSTALL_PREFIX}
 -DCMAKE_C_COMPILER:FILEPATH=%{Compiler:Executable:C}
 -DCMAKE_CXX_COMPILER:FILEPATH=%{Compiler:Executable:Cxx}</value>
-    <value type="QString" key="CMake.Source.Directory">/home/nyquist/projects/planning_ws/src/cnr_scene_manager/cnr_scene_manager</value>
-    <value type="QString" key="ProjectExplorer.BuildConfiguration.BuildDirectory">/home/nyquist/projects/planning_ws/build/cnr_scene_manager</value>
+    <value type="QString" key="CMake.Source.Directory">/home/nyquist/projects/cells_ws/src/cnr_scene_manager/cnr_scene_manager</value>
+    <value type="QString" key="ProjectExplorer.BuildConfiguration.BuildDirectory">/home/nyquist/projects/cells_ws/build/cnr_scene_manager</value>
     <valuemap type="QVariantMap" key="ProjectExplorer.BuildConfiguration.BuildStepList.0">
      <valuemap type="QVariantMap" key="ProjectExplorer.BuildStepList.Step.0">
       <valuelist type="QVariantList" key="CMakeProjectManager.MakeStep.BuildTargets">
@@ -192,8 +192,8 @@
 -DCMAKE_PREFIX_PATH:STRING=%{Qt:QT_INSTALL_PREFIX}
 -DCMAKE_C_COMPILER:STRING=%{Compiler:Executable:C}
 -DCMAKE_CXX_COMPILER:STRING=%{Compiler:Executable:Cxx}</value>
-    <value type="QString" key="CMake.Source.Directory">/home/nyquist/projects/planning_ws/src/cnr_scene_manager/cnr_scene_manager</value>
-    <value type="QString" key="ProjectExplorer.BuildConfiguration.BuildDirectory">/home/nyquist/projects/planning_ws/build/cnr_scene_manager</value>
+    <value type="QString" key="CMake.Source.Directory">/home/nyquist/projects/cells_ws/src/cnr_scene_manager/cnr_scene_manager</value>
+    <value type="QString" key="ProjectExplorer.BuildConfiguration.BuildDirectory">/home/nyquist/projects/cells_ws/build/cnr_scene_manager</value>
     <valuemap type="QVariantMap" key="ProjectExplorer.BuildConfiguration.BuildStepList.0">
      <valuemap type="QVariantMap" key="ProjectExplorer.BuildStepList.Step.0">
       <valuelist type="QVariantList" key="CMakeProjectManager.MakeStep.BuildTargets">
@@ -251,12 +251,15 @@
     <valuelist type="QVariantList" key="CustomOutputParsers"/>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
-    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">ProjectExplorer.CustomExecutableRunConfiguration</value>
-    <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey"></value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">cnr_scene_manager</value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">CMakeProjectManager.CMakeRunConfiguration.cnr_scene_manager</value>
+    <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">cnr_scene_manager</value>
     <value type="bool" key="RunConfiguration.UseCppDebugger">false</value>
     <value type="bool" key="RunConfiguration.UseCppDebuggerAuto">true</value>
+    <value type="bool" key="RunConfiguration.UseLibrarySearchPath">true</value>
     <value type="bool" key="RunConfiguration.UseQmlDebugger">false</value>
     <value type="bool" key="RunConfiguration.UseQmlDebuggerAuto">true</value>
+    <value type="QString" key="RunConfiguration.WorkingDirectory.default">/home/nyquist/projects/cells_ws/build/cnr_scene_manager</value>
    </valuemap>
    <value type="int" key="ProjectExplorer.Target.RunConfigurationCount">1</value>
   </valuemap>
