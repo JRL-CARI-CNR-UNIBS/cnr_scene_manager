@@ -39,15 +39,14 @@ ament_target_dependencies(${PROJECT_NAME} PUBLIC rclcpp tf2_eigen geometric_shap
 
 
 install(TARGETS
-        ${PROJECT_NAME}
-        DESTINATION bin
+    ${PROJECT_NAME}
+    DESTINATION lib/${PROJECT_NAME}
     )
 
 install(DIRECTORY config example_meshes launch script
     DESTINATION share/${PROJECT_NAME})
 
-ament_export_dependencies(rclcpp moveit_msgs moveit_ros_planning_interface tf2_ros Eigen3 yaml-cpp) # exports dependencies to downstream packages to avoid the the user to call find_package for those dependencies too.    
-
+ament_export_dependencies(rclcpp moveit_msgs moveit_ros_planning_interface tf2_ros Eigen3 yaml-cpp) 
 ament_package()
 
 

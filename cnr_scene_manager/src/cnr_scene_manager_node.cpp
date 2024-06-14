@@ -294,9 +294,9 @@ bool register_object_types(const std::string& param_ns)
   std::string text = "REGISTERING OBJECT TYPES FROM "+ns;
   std::string header = "=========================================================================================";
 
-  CNR_INFO(logger_,cnr_logger::BG()<<header);
-  CNR_INFO(logger_,cnr_logger::BG()<<std::setw((header.length()-text.length())/2+text.length())<<text);
-  CNR_INFO(logger_,cnr_logger::BG()<<header);
+  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header<<cnr_logger::RESET());
+  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<std::setw((header.length()-text.length())/2+text.length())<<text<<cnr_logger::RESET());
+  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header<<cnr_logger::RESET()<<cnr_logger::RESET());
 
   if(cnr::param::has(ns,w))
   {
@@ -329,12 +329,12 @@ bool register_object_types(const std::string& param_ns)
           CNR_WARN(logger_, "Cannot add multiple objects with ID: "<<id);
         else
           CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::G()<<"\t- "<<cnr_logger::W()<<id
-                   <<cnr_logger::RESET()<<cnr_logger::G()<<" registered");
+                   <<cnr_logger::RESET()<<cnr_logger::G()<<" registered"<<cnr_logger::RESET());
       }
       else
         CNR_ERROR(logger_, "Cannot register object with ID: "<<id);
     }
-    CNR_INFO(logger_,cnr_logger::BG()<<header);
+    CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header<<cnr_logger::RESET());
   }
   else
   {
@@ -521,9 +521,9 @@ bool load_scene(const std::string& param_ns)
   std::string text = "LOADING SCENE OBJECTS FROM "+ns;
   std::string header = "=========================================================================================";
 
-  CNR_INFO(logger_,cnr_logger::BG()<<header);
-  CNR_INFO(logger_,cnr_logger::BG()<<std::setw((header.length()-text.length())/2+text.length())<<text);
-  CNR_INFO(logger_,cnr_logger::BG()<<header);
+  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header<<cnr_logger::RESET());
+  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<std::setw((header.length()-text.length())/2+text.length())<<text<<cnr_logger::RESET());
+  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header<<cnr_logger::RESET());
 
   if(cnr::param::has(ns,what))
   {
@@ -551,12 +551,12 @@ bool load_scene(const std::string& param_ns)
         colors.push_back(std::move(color));
         scene_objs.emplace_back(scene_obj);
         CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::G()<<"\t- "<<cnr_logger::W()<<scene_objs.back().id
-                 <<cnr_logger::RESET()<<cnr_logger::G()<<" loaded");
+                 <<cnr_logger::RESET()<<cnr_logger::G()<<" loaded"<<cnr_logger::RESET());
       }
       else
-        CNR_ERROR(logger_,"Cannot load the %s-th object into the scene",std::distance(scene.begin(),it));
+        CNR_ERROR(logger_,cnr_logger::RESET()<<"Cannot load the "<<std::distance(scene.begin(),it)<<"-th object into the scene"<<cnr_logger::RESET());
     }
-    CNR_INFO(logger_,cnr_logger::BG()<<header);
+    CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header<<cnr_logger::RESET());
 
     if(not scene_manager_->addNamedTFObjects(scene_objs,10.0,colors,what))
     {
@@ -579,7 +579,7 @@ bool load_scene(const std::string& param_ns)
  * @return
  */
 void add_obj(const std::shared_ptr<cnr_scene_manager_msgs::srv::AddObjects::Request> req,
-         std::shared_ptr<cnr_scene_manager_msgs::srv::AddObjects::Response> res)
+             std::shared_ptr<cnr_scene_manager_msgs::srv::AddObjects::Response> res)
 {
 
   CNR_INFO(logger_,"=================================================================");
@@ -637,7 +637,7 @@ void add_obj(const std::shared_ptr<cnr_scene_manager_msgs::srv::AddObjects::Requ
 }
 
 void remove_obj(const std::shared_ptr<cnr_scene_manager_msgs::srv::RemoveObjects::Request> req,
-            std::shared_ptr<cnr_scene_manager_msgs::srv::RemoveObjects::Response> res)
+                std::shared_ptr<cnr_scene_manager_msgs::srv::RemoveObjects::Response> res)
 {
   CNR_INFO(logger_,"=================================================================");
   CNR_INFO(logger_,"==             REMOVE OBJECTS REQUEST RECEIVED!               ===");
@@ -675,7 +675,9 @@ int main(int argc, char** argv)
 {
   rclcpp::init(argc, argv);
   auto node = rclcpp::Node::make_shared("cnr_scene_manager");
-  rclcpp::Node pn("~");
+  rclcpp::executors::MultiThreadedExecutor executor;
+  executor.add_node(node);
+
   std::string package_name = "cnr_scene_manager";
   std::string package_path = ament_index_cpp::get_package_share_directory(package_name);
 
@@ -685,16 +687,19 @@ int main(int argc, char** argv)
   std::string logger_file = package_path+"/config/logger_param.yaml";
   logger_ = std::make_shared<cnr_logger::TraceLogger>("cnr_scene_manager_logger",logger_file);
 
-  scene_manager_.reset(new TFNamedObjectsManager(node));
-
   std::string param_ns;
-  node->declare_parameter("~/param_ns", "");
-  node->get_parameter("~/param_ns", param_ns);
+  node->declare_parameter("param_ns", "");
+  node->get_parameter("param_ns", param_ns);
+
+  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BY()<<"Scene objects read under param namespace: "<<param_ns<<cnr_logger::RESET());
+
+  scene_manager_.reset(new TFNamedObjectsManager(node));
 
   // Register the available object types listed under param_ns/OBJS_NS parameter
   if(not register_object_types(param_ns))
   {
     CNR_ERROR(logger_,"Cannot register object types");
+    rclcpp::shutdown();
     return 1;
   }
 
@@ -702,18 +707,24 @@ int main(int argc, char** argv)
   if(not load_scene(param_ns))
   {
     CNR_ERROR(logger_,"Cannot load scene objects");
+    rclcpp::shutdown();
     return 1;
   }
 
   // Declare services
-
   auto add_service = node->create_service<cnr_scene_manager_msgs::srv::AddObjects>(ADD_OBJ_SERVICE, &add_obj);
   CNR_INFO(logger_, "Ready to add objects to the scene");
 
   auto remove_service = node->create_service<cnr_scene_manager_msgs::srv::RemoveObjects>(REMOVE_OBJ_SERVICE, &remove_obj);
   CNR_INFO(logger_, "Ready to remove objects from the scene");
 
-  rclcpp::spin(node);
+  rclcpp::WallRate loop_rate(1000);
+  while(rclcpp::ok())
+  {
+    executor.spin_some();
+    loop_rate.sleep();
+  }
+
   rclcpp::shutdown();
 
   return 0;
