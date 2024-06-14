@@ -691,11 +691,11 @@ int main(int argc, char** argv)
   node->declare_parameter("param_ns", "");
   node->get_parameter("param_ns", param_ns);
 
-  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BY()<<"Scene objects read under param namespace: "<<param_ns<<cnr_logger::RESET());
-
-  scene_manager_.reset(new TFNamedObjectsManager(node));
+  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BY()<<
+           "Scene objects read under param namespace: "<<param_ns<<cnr_logger::RESET());
 
   // Register the available object types listed under param_ns/OBJS_NS parameter
+  scene_manager_.reset(new TFNamedObjectsManager(node));
   if(not register_object_types(param_ns))
   {
     CNR_ERROR(logger_,"Cannot register object types");
