@@ -26,7 +26,11 @@ The initial scene is loaded based on the description provided under the paramete
 
 The node provides the following services to dynamically manage the scene during runtime:
 - `cnr_scene_manager/add_objects`: Adds *registered objects* to the scene.
+- `cnr_scene_manager/move_objects`: Moves *registered objects* to different poses in the scene.
 - `cnr_scene_manager/remove_objects`: Removes *registered objects* from the scene.
+
+### Run an example
+You can run an example by launching ```roslaunch cnr_scene_manager cnr_scene_manager_test.launch```, but you need to download [this package](https://github.com/JRL-CARI-CNR-UNIBS/cell_cartesian) first.
 
 ### Examples and Configuration
 

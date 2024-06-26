@@ -10,11 +10,13 @@
 #include <cnr_tf_named_object_loader/cnr_tf_named_object_loader.h>
 
 #include <cnr_scene_manager_msgs/AddObjects.h>
+#include <cnr_scene_manager_msgs/MoveObjects.h>
 #include <cnr_scene_manager_msgs/RemoveObjects.h>
 
 #define OBJS_NS "/object_geometries"
 #define SCENE_NS "/scene_objects"
 #define ADD_OBJ_SERVICE "add_objects"
+#define MOVE_OBJ_SERVICE "move_objects"
 #define REMOVE_OBJ_SERVICE "remove_objects"
 
 using namespace  cnr_tf_named_object_loader;
@@ -637,6 +639,91 @@ bool add(cnr_scene_manager_msgs::AddObjects::Request& req,
   return true;
 }
 
+/**
+ * @brief move callback for MOVE_OBJ_SERVICE
+ * @param req
+ * @param res
+ * @return
+ */
+bool move(cnr_scene_manager_msgs::MoveObjects::Request& req,
+          cnr_scene_manager_msgs::MoveObjects::Response& res)
+{
+//  CNR_INFO(logger_,"=================================================================");
+//  CNR_INFO(logger_,"===               MOVE OBJECTS REQUEST RECEIVED!              ===");
+//  CNR_INFO(logger_,"=================================================================");
+
+  if(req.obj_ids.size() != req.poses.size())
+  {
+    CNR_ERROR(logger_, "req.obj_id size should be euqal to req.poses size, but they are %u and %u",req.obj_ids.size(),req.poses.size());
+    res.success = false;
+    return false;
+  }
+
+  std::map<std::string,geometry_msgs::Pose> pose_map;
+  std::map<std::string,std_msgs::ColorRGBA> color_map;
+  std::pair<std::string,geometry_msgs::Pose> pair_pose;
+  std::pair<std::string,std_msgs::ColorRGBA> pair_color;
+
+  size_t pos;
+  std::string id, registered_obj_key;
+
+  for(size_t i=0;i<req.obj_ids.size();i++)
+  {
+    id = req.obj_ids[i];
+    pos = id.find("/n_");
+
+    if (pos != std::string::npos)
+      registered_obj_key = id.substr(0, pos);
+    else
+    {
+      CNR_ERROR(logger_,"id not valid, it should be like registered_type/n_XXX");
+      res.success = false;
+      return false;
+    }
+
+    auto it = registered_object_types_.find(registered_obj_key);
+    if(it == registered_object_types_.end())
+    {
+      CNR_ERROR(logger_,"id not associated to a registered object type");
+      res.success = false;
+      return false;
+    }
+    else
+    {
+      pair_color.first = id;
+      pair_color.second = it->second.obj_.color_;
+
+      color_map.insert(pair_color);
+
+      pair_pose.first = id;
+      pair_pose.second.position.x = req.poses[i].position.x;
+      pair_pose.second.position.y = req.poses[i].position.y;
+      pair_pose.second.position.z = req.poses[i].position.z;
+      pair_pose.second.orientation.x = req.poses[i].orientation.x;
+      pair_pose.second.orientation.y = req.poses[i].orientation.y;
+      pair_pose.second.orientation.z = req.poses[i].orientation.z;
+      pair_pose.second.orientation.w = req.poses[i].orientation.w;
+
+      pose_map.insert(pair_pose);
+    }
+  }
+
+  double timeout = 0.01;
+  if(req.timeout)
+    timeout = req.timeout;
+
+  std::string what;
+  if(not scene_manager_->moveNamedTFObjects(pose_map,color_map,timeout,what))
+  {
+    CNR_ERROR(logger_,"Error in moving the objects in the scene\n%s", what.c_str());
+    res.success = false;
+    return false;
+  }
+
+  res.success = true;
+  return true;
+}
+
 bool remove(cnr_scene_manager_msgs::RemoveObjects::Request& req,
             cnr_scene_manager_msgs::RemoveObjects::Response& res)
 {
@@ -707,6 +794,9 @@ int main(int argc, char** argv)
   // Declare services
   ros::ServiceServer add_service = pn.advertiseService(ADD_OBJ_SERVICE, add);
   ROS_INFO("Ready to add objects to the scene");
+
+  ros::ServiceServer move_service = pn.advertiseService(MOVE_OBJ_SERVICE, move);
+  ROS_INFO("Ready to move objects in the scene");
 
   ros::ServiceServer remove_service = pn.advertiseService(REMOVE_OBJ_SERVICE, remove);
   ROS_INFO("Ready to remove objects from the scene");

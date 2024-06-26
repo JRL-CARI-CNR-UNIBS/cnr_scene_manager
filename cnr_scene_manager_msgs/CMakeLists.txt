@@ -22,6 +22,7 @@ add_service_files( DIRECTORY srv
                    FILES
                    AddObjects.srv
                    RemoveObjects.srv
+                   MoveObjects.srv
                  )
 
 generate_messages(DEPENDENCIES
