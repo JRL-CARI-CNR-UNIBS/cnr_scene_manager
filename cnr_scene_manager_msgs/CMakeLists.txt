@@ -25,6 +25,7 @@ rosidl_generate_interfaces(
     ${PROJECT_NAME}
         "srv/RemoveObjects.srv"
         "srv/AddObjects.srv"
+	"srv/MoveObjects.srv"
         "msg/Object.msg"
     DEPENDENCIES geometry_msgs
 )

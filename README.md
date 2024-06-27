@@ -26,9 +26,13 @@ The initial scene is loaded based on the description provided under the paramete
 
 The node provides the following services to dynamically manage the scene during runtime:
 - `cnr_scene_manager/add_objects`: Adds *registered objects* to the scene.
+- `cnr_scene_manager/move_objects`: Moves *registered objects* to different poses in the scene.
 - `cnr_scene_manager/remove_objects`: Removes *registered objects* from the scene.
+
+### Run an example
+You can run an example by launching ```ros2 launch cnr_scene_manager cnr_scene_manager_test.launch.py```, but you need to download [this package](https://github.com/JRL-CARI-CNR-UNIBS/cell_cartesian) first.
 
 ### Examples and Configuration
 
-- An example of object and scene descriptions can be found in [this config file](https://github.com/JRL-CARI-CNR-UNIBS/cnr_scene_manager/blob/master/cnr_scene_manager/config/scene.yaml).
-- The necessary services and messages are defined in [this package](https://github.com/JRL-CARI-CNR-UNIBS/cnr_scene_manager/tree/master/cnr_scene_manager_msgs).
+- An example of object and scene descriptions can be found in [this config file](https://github.com/JRL-CARI-CNR-UNIBS/cnr_scene_manager/blob/ros2/cnr_scene_manager/config/scene.yaml).
+- The necessary services and messages are defined in [this package](https://github.com/JRL-CARI-CNR-UNIBS/cnr_scene_manager/tree/ros2/cnr_scene_manager_msgs).
