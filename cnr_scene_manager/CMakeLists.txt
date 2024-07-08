@@ -27,7 +27,7 @@ catkin_package(
   #INCLUDE_DIRS include
   #LIBRARIES cnr_scene_manager
   CATKIN_DEPENDS cnr_tf_named_object_loader tf_conversions eigen_conversions cnr_scene_manager_msgs
-  DEPENDS cnr_param cnr_logger
+  DEPENDS
 )
 
 ###########
