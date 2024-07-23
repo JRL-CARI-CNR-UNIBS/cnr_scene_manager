@@ -57,6 +57,16 @@ target_link_libraries(test_scene_manager
   cnr_logger::cnr_logger
 )
 
+add_executable(test_move src/test_move.cpp)
+add_dependencies(test_move ${test_scene_manager_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+## Specify libraries to link a library or executable target against
+target_link_libraries(test_move
+  ${catkin_LIBRARIES}
+  cnr_param::cnr_param
+  cnr_logger::cnr_logger
+)
+
 #############
 ## Install ##
 #############
