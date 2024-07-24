@@ -17,6 +17,7 @@ cnr_scene_manager_test:
 
         sphere_blue: {sphere: 0.1, color: [0.0,0.0,1.0,0.5], position: [0.0,0.0,0.0], quaternion: [0, 0, 0, 1]}
         plane: {box: [5.0, 5.0, 0.10], color: [0.75,0.75,0.75,1], position: [0.0,0.0,0.0], quaternion: [0, 0, 0, 1]}
+        moving_sphere: {sphere: 0.1, color: [0.0,0.0,1.0,1.0], position: [0.0,0.0,0.0], quaternion: [0, 0, 0, 1]}
 
     scene_objects:
         - {type: "sphere_obj", frame: "world", position: [2,0.5,0.5], quaternion: [0, 0, 0, 1]}

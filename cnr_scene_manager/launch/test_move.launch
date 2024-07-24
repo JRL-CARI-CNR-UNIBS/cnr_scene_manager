@@ -4,7 +4,7 @@
 <!--  Load parameters in cnr_param server-->
 <node pkg="cnr_scene_manager"
 type="load_params.sh" name="load_params"
-args="scene.yaml"
+args="scene.yaml test_move.yaml"
 output="screen">
 </node>
 
@@ -12,9 +12,11 @@ output="screen">
 <include file="$(find cartesian_moveit_config)/launch/demo.launch"> </include>
 
 <!-- Load the scene -->
-<node pkg="cnr_scene_manager" name="cnr_scene_manager" type="cnr_scene_manager" output="screen" >
+<node pkg="cnr_scene_manager" name="cnr_scene_manager" type="cnr_scene_manager" output="screen">
         <param name="param_ns" type="string" value="/cnr_scene_manager_test"/>
 </node>
+
+<node pkg="cnr_scene_manager" name="test_move" type="test_move" output="screen"/>
 
 </launch>
 <!--          launch-prefix="gdb -ex run -X-args" >-->

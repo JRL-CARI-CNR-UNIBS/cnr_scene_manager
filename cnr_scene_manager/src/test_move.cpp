@@ -31,10 +31,16 @@ int main(int argc, char** argv)
   std::string logger_file = package_path+"/config/logger_param.yaml";
   cnr_logger::TraceLoggerPtr logger = std::make_shared<cnr_logger::TraceLogger>("cnr_scene_manager_logger",logger_file);
 
-  auto add_obj    = n.serviceClient<cnr_scene_manager_msgs::AddObjects   >("/cnr_scene_manager/add_objects"   );
-  auto move_obj   = n.serviceClient<cnr_scene_manager_msgs::MoveObjects  >("/cnr_scene_manager/move_objects"  );
-  auto remove_obj = n.serviceClient<cnr_scene_manager_msgs::RemoveObjects>("/cnr_scene_manager/remove_objects");
-  auto get_plannning_scene= n.serviceClient<moveit_msgs::GetPlanningScene>("/get_planning_scene");
+  CNR_INFO(logger,"Waiting for /get_planning_scene");
+  ros::service::waitForService("/get_planning_scene");
+
+  CNR_INFO(logger,"Waiting for /cnr_scene_manager/move_objects server");
+  ros::service::waitForService("/cnr_scene_manager/move_objects");
+
+  auto get_plannning_scene = n.serviceClient<moveit_msgs::GetPlanningScene        >("/get_planning_scene"              ,true ); //persistent connection
+  auto add_obj             = n.serviceClient<cnr_scene_manager_msgs::AddObjects   >("/cnr_scene_manager/add_objects"   ,false);
+  auto move_obj            = n.serviceClient<cnr_scene_manager_msgs::MoveObjects  >("/cnr_scene_manager/move_objects"  ,true ); //persistent connection
+  auto remove_obj          = n.serviceClient<cnr_scene_manager_msgs::RemoveObjects>("/cnr_scene_manager/remove_objects",false);
 
   if(not add_obj.waitForExistence(ros::Duration(10)))
   {
@@ -57,6 +63,19 @@ int main(int argc, char** argv)
     return 1;
   }
 
+  ros::WallDuration(5.0).sleep();
+
+  std::string what;
+
+  size_t n_objs = 1;
+  size_t n_objs_default = 1;
+
+  if(not cnr::param::has("/cnr_scene_manager_test_move/n_objs",what))
+    CNR_ERROR(logger,"cnr_scene_manager_test_move/n_obj not available:\n"<<what);
+  else
+    if(not cnr::param::get("/cnr_scene_manager_test_move/n_objs",n_objs,what,n_objs_default,true))
+      CNR_ERROR(logger,"Error retrieving cnr_scene_manager_test_move/n_obj:\n"<<what);
+
   geometry_msgs::PoseStamped pose_msg;
   pose_msg.pose.position.x = 0;
   pose_msg.pose.position.y = 0;
@@ -70,12 +89,11 @@ int main(int argc, char** argv)
   pose_msg.header.stamp = ros::Time::now();
 
   cnr_scene_manager_msgs::Object obj;
-  obj.object_type = "sphere_obj";
+  obj.object_type = "moving_sphere";
   obj.pose = pose_msg;
 
   cnr_scene_manager_msgs::AddObjects add_srv;
-
-  add_srv.request.objects.push_back(obj);
+  add_srv.request.objects = std::vector<cnr_scene_manager_msgs::Object>(n_objs,obj);
 
   if(not add_obj.call(add_srv))
   {
@@ -83,19 +101,20 @@ int main(int argc, char** argv)
     return 1;
   }
 
-  std::string obj_id;
+  std::vector<std::string> obj_id;
 
   if(not add_srv.response.success)
   {
-    CNR_ERROR(logger,"Adding the object failed");
+    CNR_ERROR(logger,"Adding objects failed");
     return 1;
   }
   else
   {
-    CNR_ERROR(logger,"Object added with id %s",obj_id.c_str());
+    for(const auto id:add_srv.response.ids)
+      CNR_INFO(logger,"Object added with id %s",id.c_str());
   }
 
-  CNR_INFO(logger,"Start moving the object");
+  CNR_INFO(logger,"Start moving objects");
 
   std::random_device rseed;
   std::mt19937 gen(rseed());
@@ -103,34 +122,42 @@ int main(int argc, char** argv)
 
   size_t n_step = 0;
   double dt = 0.010;
-  std::vector<double> vel = {0.0,0.0,0.0};
+
+  std::vector<std::vector<double>> vel(n_objs,{0.0,0.0,0.0});
+  std::vector<geometry_msgs::Pose> poses(n_objs,pose_msg.pose);
+
+  cnr_scene_manager_msgs::MoveObjects move_srv;
+  move_srv.request.poses = poses;
+  move_srv.request.obj_ids = add_srv.response.ids;
 
   ros::WallRate lp(1.0/dt);
-  ros::WallTime tic, toc;
+  ros::WallTime tic, tic_cycle;
   double time_move,time_pln_scn;
   while(ros::ok())
   {
-    if(n_step == 10)
-    {
-      vel = {rd(gen),rd(gen),rd(gen)};
+    tic_cycle = ros::WallTime::now();
+
+    if(n_step>10)
       n_step = 0;
+
+    for(size_t i=0;i<n_objs;i++)
+    {
+      if(n_step == 0)
+        vel[i] = {rd(gen),rd(gen),rd(gen)};
+
+      poses[i].position.x = poses[i].position.x+vel[i][0]*dt;
+      poses[i].position.y = poses[i].position.y+vel[i][1]*dt;
+      poses[i].position.z = poses[i].position.z+vel[i][2]*dt;
+
+      move_srv.request.poses[i] = poses[i];
     }
-
-    pose_msg.pose.position.x = pose_msg.pose.position.x+vel[0]*dt;
-    pose_msg.pose.position.y = pose_msg.pose.position.y+vel[1]*dt;
-    pose_msg.pose.position.z = pose_msg.pose.position.z+vel[2]*dt;
-
-    cnr_scene_manager_msgs::MoveObjects move_srv;
-    move_srv.request.obj_ids.push_back(obj_id);
-    move_srv.request.poses.push_back(pose_msg.pose);
 
     tic = ros::WallTime::now();
     if(not move_obj.call(move_srv))
     {
       CNR_ERROR(logger,"call to move_obj srv not ok");
     }
-    toc = ros::WallTime::now();
-    time_move = (toc-tic).toSec();
+    time_move = (ros::WallTime::now()-tic).toSec()*1000.0;
 
     moveit_msgs::GetPlanningScene ps_srv;
     tic = ros::WallTime::now();
@@ -138,11 +165,11 @@ int main(int argc, char** argv)
     {
       CNR_ERROR(logger,"call to get_plannning_scene srv not ok");
     }
-    toc = ros::WallTime::now();
-    time_pln_scn = (toc-tic).toSec();
+    time_pln_scn = (ros::WallTime::now()-tic).toSec()*1000.0;
 
-    CNR_INFO(logger,"Time move call "<<time_move<<"\tTime pln scn "<<time_pln_scn);
     n_step++;
+
+    CNR_INFO(logger,"Time move call "<<time_move<<"ms\tTime pln scn "<<time_pln_scn<<"ms\tTime cycle "<<(ros::WallTime::now()-tic_cycle).toSec()*1000.0<<"ms");
 
     lp.sleep();
   }
