@@ -28,8 +28,14 @@ add_executable(test_scene_manager src/test.cpp)
 target_link_libraries(test_scene_manager PUBLIC cnr_param::cnr_param cnr_logger::cnr_logger)
 ament_target_dependencies(test_scene_manager PUBLIC rclcpp tf2_eigen geometric_shapes moveit_msgs tf2_ros cnr_scene_manager_msgs cnr_tf_named_object_loader)
 
+add_executable(test_move src/test_move.cpp)
+target_link_libraries(test_move PUBLIC cnr_param::cnr_param cnr_logger::cnr_logger)
+ament_target_dependencies(test_move PUBLIC rclcpp tf2_eigen geometric_shapes moveit_msgs tf2_ros cnr_scene_manager_msgs cnr_tf_named_object_loader)
+
+
 install(TARGETS
     ${PROJECT_NAME}
+    test_move
     test_scene_manager
     DESTINATION lib/${PROJECT_NAME}
     )
