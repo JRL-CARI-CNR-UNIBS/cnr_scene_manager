@@ -15,4 +15,9 @@ launch:
     param:
         - name: 'param_ns'
           value: '/cnr_scene_manager_test'
+- node:
+    pkg: "cnr_scene_manager"
+    exec: "test_move"
+    output: "screen"
+    prefix: ['gdb -ex=r --args']
     
