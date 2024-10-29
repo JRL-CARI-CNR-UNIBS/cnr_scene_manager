@@ -14,6 +14,7 @@
 #include <cnr_scene_manager_msgs/srv/remove_objects.hpp>
 
 using namespace  cnr_tf_named_object_loader;
+using namespace std::chrono_literals;
 
 int main(int argc, char** argv)
 {
