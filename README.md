@@ -6,7 +6,7 @@ The `cnr_scene_manager` package provides a tool to dynamically load and unload o
 
 This package relies on the following dependencies:
 
-- [cnr_common](https://github.com/JRL-CARI-CNR-UNIBS/cnr_common.git) and : For reading parameters and for logging.
+- [cnr_common](https://github.com/JRL-CARI-CNR-UNIBS/cnr_common.git): For reading parameters and for logging.
 - [cnr_tf_named_object_loader](https://github.com/CNR-STIIMA-IRAS/cnr_tf_named_object_loader): For interfacing with the MoveitPlanningScene.
 
 ## How It Works
