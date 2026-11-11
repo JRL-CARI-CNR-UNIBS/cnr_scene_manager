@@ -23,13 +23,13 @@ find_package(geometric_shapes REQUIRED)
 
 add_executable(${PROJECT_NAME} src/cnr_scene_manager_node.cpp)
 target_link_libraries(${PROJECT_NAME} PUBLIC yaml-cpp::yaml-cpp)
-ament_target_dependencies(${PROJECT_NAME} PUBLIC rclcpp ament_index_cpp tf2_eigen geometric_shapes moveit_msgs tf2_ros cnr_scene_manager_msgs cnr_tf_named_object_loader)
+target_link_libraries(${PROJECT_NAME} PUBLIC ${rclcpp_TARGETS} ${ament_index_cpp_TARGETS} ${tf2_eigen_TARGETS} ${geometric_shapes_TARGETS} ${moveit_msgs_TARGETS} ${tf2_ros_TARGETS} ${cnr_scene_manager_msgs_TARGETS} ${cnr_tf_named_object_loader_TARGETS})
 
 add_executable(test_scene_manager src/test.cpp)
-ament_target_dependencies(test_scene_manager PUBLIC rclcpp ament_index_cpp tf2_eigen geometric_shapes moveit_msgs tf2_ros cnr_scene_manager_msgs cnr_tf_named_object_loader)
+target_link_libraries(test_scene_manager PUBLIC ${rclcpp_TARGETS} ${ament_index_cpp_TARGETS} ${tf2_eigen_TARGETS} ${geometric_shapes_TARGETS} ${moveit_msgs_TARGETS} ${tf2_ros_TARGETS} ${cnr_scene_manager_msgs_TARGETS} ${cnr_tf_named_object_loader_TARGETS})
 
 add_executable(test_move src/test_move.cpp)
-ament_target_dependencies(test_move PUBLIC rclcpp ament_index_cpp tf2_eigen geometric_shapes moveit_msgs tf2_ros cnr_scene_manager_msgs cnr_tf_named_object_loader)
+target_link_libraries(test_move PUBLIC ${rclcpp_TARGETS} ${ament_index_cpp_TARGETS} ${tf2_eigen_TARGETS} ${geometric_shapes_TARGETS} ${moveit_msgs_TARGETS} ${tf2_ros_TARGETS} ${cnr_scene_manager_msgs_TARGETS} ${cnr_tf_named_object_loader_TARGETS})
 
 
 install(TARGETS
