@@ -4,8 +4,6 @@
 #include <moveit_msgs/srv/apply_planning_scene.hpp>
 #include <geometric_shapes/shape_operations.h>
 
-#include <cnr_param/cnr_param.h>
-#include <cnr_logger/cnr_logger.h>
 #include <cnr_tf_named_object_loader/cnr_tf_named_object_loader.h>
 
 #include <cnr_scene_manager_msgs/msg/object.hpp>

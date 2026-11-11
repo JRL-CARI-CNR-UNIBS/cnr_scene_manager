@@ -17,8 +17,8 @@
   <build_export_depend>rclcpp</build_export_depend>
   <exec_depend>rclcpp</exec_depend>
 
-  <depend>cnr_param</depend>
-  <depend>cnr_logger</depend>
+  <depend>ament_index_cpp</depend>
+  <depend>yaml-cpp</depend>
   <depend>cnr_scene_manager_msgs</depend>
   <depend>cnr_tf_named_object_loader</depend>
   <depend>moveit_msgs</depend>

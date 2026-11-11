@@ -6,20 +6,20 @@ The `cnr_scene_manager` package provides a tool to dynamically load and unload o
 
 This package relies on the following dependencies:
 
-- [cnr_common](https://github.com/JRL-CARI-CNR-UNIBS/cnr_common.git) and : For reading parameters and for logging.
+- [yaml-cpp](https://github.com/jbeder/yaml-cpp): For reading the scene description file.
 - [cnr_tf_named_object_loader](https://github.com/CNR-STIIMA-IRAS/cnr_tf_named_object_loader): For interfacing with the MoveitPlanningScene.
   
 ## How It Works
 
-The core functionality is provided by the `cnr_scene_manager_node`. This node maintains a list of available object descriptions read from parameters and uses them to load the scene at startup or during runtime.
+The core functionality is provided by the `cnr_scene_manager_node`. This node maintains a list of available object descriptions read from a YAML file and uses them to load the scene at startup or during runtime.
 
 ### Initialization
 
-When launched, the node reads available object descriptions from the parameter namespace `param_ns/object_geometries`, where `param_ns` is the first-level namespace provided to the node (see the [example launch file](https://github.com/JRL-CARI-CNR-UNIBS/cnr_scene_manager/blob/master/cnr_scene_manager/launch/cnr_scene_manager.launch)). These object descriptions are stored and referred to as *registered objects*.
+When launched, the node loads the YAML file given by the ROS parameter `scene_file` (default: `config/scene.yaml` of this package) and reads the available object descriptions under `param_ns/object_geometries`, where `param_ns` is the ROS parameter with the namespace inside the file, e.g. `/cnr_scene_manager_test` (see the [example launch file](https://github.com/JRL-CARI-CNR-UNIBS/cnr_scene_manager/blob/ros2/cnr_scene_manager/launch/cnr_scene_manager.yaml.launch)). These object descriptions are stored and referred to as *registered objects*.
 
 ### Loading the Initial Scene
 
-The initial scene is loaded based on the description provided under the parameter namespace `param_ns/scene_objects`. All objects referred to in the scene must be *registered objects*.
+The initial scene is loaded based on the description provided under `param_ns/scene_objects` in the same file. All objects referred to in the scene must be *registered objects*.
 
 ### Dynamic Scene Management
 
@@ -29,7 +29,7 @@ The node provides the following services to dynamically manage the scene during 
 - `cnr_scene_manager/remove_objects`: Removes *registered objects* from the scene.
 
 ### Run an example
-You can run an example by launching ```ros2 launch cnr_scene_manager cnr_scene_manager_test.launch.py```, but you need to download [this package](https://github.com/JRL-CARI-CNR-UNIBS/cell_cartesian) first.
+You can run an example by launching ```ros2 launch cnr_scene_manager cnr_scene_manager.yaml.launch```, but you need to download [this package](https://github.com/JRL-CARI-CNR-UNIBS/cell_cartesian) first.
 
 ### Examples and Configuration
 

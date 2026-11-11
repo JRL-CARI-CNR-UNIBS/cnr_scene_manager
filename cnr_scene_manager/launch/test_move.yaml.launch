@@ -1,10 +1,4 @@
 launch:
-- executable:
-    cmd: 'cnr_param_server -p $(find-pkg-share cnr_scene_manager)/config/scene.yaml'
-
-- executable:
-    cmd: 'cnr_param_server -p $(find-pkg-share cnr_scene_manager)/config/test_move.yaml'
-
 - include:
    file: "$(find-pkg-share cartesian_moveit_config)/launch/demo.launch.py"
 
@@ -13,11 +7,15 @@ launch:
     exec: "cnr_scene_manager"
     output: "screen"
     param:
+        - name: 'scene_file'
+          value: '$(find-pkg-share cnr_scene_manager)/config/scene.yaml'
         - name: 'param_ns'
           value: '/cnr_scene_manager_test'
 - node:
     pkg: "cnr_scene_manager"
     exec: "test_move"
+    name: "cnr_scene_manager_test_move"
     output: "screen"
     prefix: ['gdb -ex=r --args']
-    
+    param:
+        - from: '$(find-pkg-share cnr_scene_manager)/config/test_move.yaml'

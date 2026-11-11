@@ -7,8 +7,6 @@
 #include <moveit_msgs/srv/get_planning_scene.hpp>
 #include <geometric_shapes/shape_operations.h>
 
-#include <cnr_param/cnr_param.h>
-#include <cnr_logger/cnr_logger.h>
 #include <cnr_tf_named_object_loader/cnr_tf_named_object_loader.h>
 
 #include <cnr_scene_manager_msgs/msg/object.hpp>
@@ -27,19 +25,6 @@ int main(int argc, char** argv)
   auto move_client = n->create_client<cnr_scene_manager_msgs::srv::MoveObjects>("/cnr_scene_manager/move_objects");
   auto remove_client = n->create_client<cnr_scene_manager_msgs::srv::RemoveObjects>("/cnr_scene_manager/remove_objects");
 
-  // Load logger configuration file
-  std::string package_name = "cnr_scene_manager";
-  std::string package_path = ament_index_cpp::get_package_share_directory(package_name);
-
-  if (package_path.empty())
-  {
-    RCLCPP_ERROR_STREAM(n->get_logger(),"Failed to get path for package '" << package_name);
-    return 1;
-  }
-
-  std::string logger_file = package_path+"/config/logger_param.yaml";
-  cnr_logger::TraceLoggerPtr logger = std::make_shared<cnr_logger::TraceLogger>("cnr_scene_manager_logger",logger_file);
-
   auto get_plannning_scene = n->create_client<moveit_msgs::srv::GetPlanningScene        >("/get_planning_scene");
   auto add_obj             = n->create_client<cnr_scene_manager_msgs::srv::AddObjects   >("/cnr_scene_manager/add_objects"   );
   auto move_obj            = n->create_client<cnr_scene_manager_msgs::srv::MoveObjects  >("/cnr_scene_manager/move_objects"  );
@@ -47,37 +32,34 @@ int main(int argc, char** argv)
 
   if(not add_obj->wait_for_service(std::chrono::seconds(10)))
   {
-    CNR_ERROR(logger,"unable to connect to /cnr_scene_manager/add_objects");
+    RCLCPP_ERROR_STREAM(n->get_logger(),"unable to connect to /cnr_scene_manager/add_objects");
     return 1;
   }
   if(not move_obj->wait_for_service(std::chrono::seconds(10)))
   {
-    CNR_ERROR(logger,"unable to connect to /cnr_scene_manager/move_obj");
+    RCLCPP_ERROR_STREAM(n->get_logger(),"unable to connect to /cnr_scene_manager/move_obj");
     return 1;
   }
   if(not remove_obj->wait_for_service(std::chrono::seconds(10)))
   {
-    CNR_ERROR(logger,"unable to connect to /cnr_scene_manager/remove_obj");
+    RCLCPP_ERROR_STREAM(n->get_logger(),"unable to connect to /cnr_scene_manager/remove_obj");
     return 1;
   }
   if(not get_plannning_scene->wait_for_service(std::chrono::seconds(10)))
   {
-    CNR_ERROR(logger,"unable to connect to /get_plannning_scene");
+    RCLCPP_ERROR_STREAM(n->get_logger(),"unable to connect to /get_plannning_scene");
     return 1;
   }
 
   rclcpp::sleep_for(std::chrono::seconds(5));
 
-  std::string what;
-
-  size_t n_objs = 1;
-  size_t n_objs_default = 1;
-
-  if(not cnr::param::has("/cnr_scene_manager_test_move/n_objs",what))
-    CNR_ERROR(logger,"cnr_scene_manager_test_move/n_obj not available:\n"<<what);
-  else
-    if(not cnr::param::get("/cnr_scene_manager_test_move/n_objs",n_objs,what,n_objs_default,true))
-      CNR_ERROR(logger,"Error retrieving cnr_scene_manager_test_move/n_obj:\n"<<what);
+  int64_t n_objs_param = n->declare_parameter<int64_t>("n_objs", 1);
+  if(n_objs_param < 1)
+  {
+    RCLCPP_ERROR_STREAM(n->get_logger(),"n_objs should be positive, it is "<<n_objs_param);
+    return 1;
+  }
+  size_t n_objs = static_cast<size_t>(n_objs_param);
 
   geometry_msgs::msg::PoseStamped pose_msg;
   pose_msg.pose.position.x = 0;
@@ -110,16 +92,16 @@ int main(int argc, char** argv)
   auto future = result.get();
   if(not future->success)
   {
-    CNR_ERROR(logger,"Adding objects failed");
+    RCLCPP_ERROR_STREAM(n->get_logger(),"Adding objects failed");
     return 1;
   }
   else
   {
     for(const auto& id:future->ids)
-      CNR_INFO(logger,"Object added with id %s",id.c_str());
+      RCLCPP_INFO_STREAM(n->get_logger(),"Object added with id "<<id);
   }
 
-  CNR_INFO(logger,"Start moving objects");
+  RCLCPP_INFO_STREAM(n->get_logger(),"Start moving objects");
 
   std::random_device rseed;
   std::mt19937 gen(rseed());
@@ -168,7 +150,7 @@ int main(int argc, char** argv)
     auto future = result.get();
     if(not future->success)
     {
-      CNR_ERROR(logger,"Moving objects failed");
+      RCLCPP_ERROR_STREAM(n->get_logger(),"Moving objects failed");
       return 1;
     }
     auto time = (n->get_clock()->now()-tic);
@@ -186,7 +168,7 @@ int main(int argc, char** argv)
     auto future_ps = result_ps.get();
     if(not future_ps)
     {
-      CNR_ERROR(logger,"Failed getting planning scene msg");
+      RCLCPP_ERROR_STREAM(n->get_logger(),"Failed getting planning scene msg");
       return 1;
     }
     time = (n->get_clock()->now()-tic);
@@ -196,7 +178,7 @@ int main(int argc, char** argv)
 
     time = (n->get_clock()->now()-tic_cycle);
     time_cycle = time.seconds()*1000.0+time.nanoseconds()/1000000.0;
-    CNR_INFO(logger,"Time move call "<<time_move<<"ms\tTime pln scn "<<time_pln_scn<<"ms\tTime cycle "<<time_cycle<<"ms");
+    RCLCPP_INFO_STREAM(n->get_logger(),"Time move call "<<time_move<<"ms\tTime pln scn "<<time_pln_scn<<"ms\tTime cycle "<<time_cycle<<"ms");
 
     lp.sleep();
   }

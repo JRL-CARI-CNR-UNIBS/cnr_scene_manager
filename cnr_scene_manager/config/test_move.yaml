@@ -1,2 +1,3 @@
 cnr_scene_manager_test_move:
+  ros__parameters:
     n_objs: 5

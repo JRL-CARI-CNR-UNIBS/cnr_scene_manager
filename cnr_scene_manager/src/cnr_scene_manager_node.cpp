@@ -1,11 +1,13 @@
+#include <iomanip>
+#include <sstream>
+#include <yaml-cpp/yaml.h>
+
 #include <rclcpp/rclcpp.hpp>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 #include <moveit_msgs/srv/apply_planning_scene.hpp>
 #include <geometric_shapes/shape_operations.h>
 
-#include <cnr_param/cnr_param.h>
-#include <cnr_logger/cnr_logger.h>
 #include <cnr_tf_named_object_loader/cnr_tf_named_object_loader.h>
 
 #include <cnr_scene_manager_msgs/srv/add_objects.hpp>
@@ -48,9 +50,50 @@ public:
 };
 
 /**
- * @brief logger_ cnr_logger::TraceLogger for logging
+ * @brief logger_ logger of the node
  */
-cnr_logger::TraceLoggerPtr logger_;
+rclcpp::Logger logger_ = rclcpp::get_logger("cnr_scene_manager");
+
+/**
+ * @brief config_ content of the scene configuration file (parameter scene_file)
+ */
+YAML::Node config_;
+
+/**
+ * @brief get_config_node finds a node inside config_ given a path like "/ns1/ns2/key"
+ * @param path keys separated by '/', empty keys are ignored ("" or "/" means the root)
+ * @param node the node found
+ * @param what error message if the node is not found
+ * @return true if the node is found, false otherwise
+ */
+bool get_config_node(const std::string& path, YAML::Node& node, std::string& what)
+{
+  YAML::Node current = config_;
+  std::stringstream ss(path);
+  std::string key;
+  while(std::getline(ss,key,'/'))
+  {
+    if(key.empty())
+      continue;
+
+    if(not current.IsMap())
+    {
+      what = "cannot look for key '"+key+"' in "+path+": parent is not a map";
+      return false;
+    }
+
+    // const access, so that missing keys are not created
+    const YAML::Node child = static_cast<const YAML::Node&>(current)[key];
+    if(not child)
+    {
+      what = "key '"+key+"' of "+path+" not found";
+      return false;
+    }
+    current.reset(child); // reset, not '=', which would overwrite the parent content
+  }
+  node.reset(current);
+  return true;
+}
 
 /**
  * @brief registered_objects_ map of registered object types
@@ -82,13 +125,13 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
     try {
       rgba = yaml_node["color"].as<std::vector<double>>();
     } catch (const YAML::BadConversion& e) {
-      CNR_ERROR(logger_,"color should be an array of 4 double (r,g,b,alpha)");
+      RCLCPP_ERROR_STREAM(logger_,"color should be an array of 4 double (r,g,b,alpha)");
       return false;
     }
 
     if(rgba.size() != 4)
     {
-      CNR_ERROR(logger_,"color should be an array of 4 double (r,g,b,alpha)");
+      RCLCPP_ERROR_STREAM(logger_,"color should be an array of 4 double (r,g,b,alpha)");
       return false;
     }
   }
@@ -107,13 +150,13 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
     try {
       quaternion = yaml_node["quaternion"].as<std::vector<double>>();
     } catch (const YAML::BadConversion& e) {
-      CNR_ERROR(logger_,"quaternion should be an array of 4 double (i,j,k,w)");
+      RCLCPP_ERROR_STREAM(logger_,"quaternion should be an array of 4 double (i,j,k,w)");
       return false;
     }
 
     if(quaternion.size() != 4)
     {
-      CNR_ERROR(logger_,"quaternion should be an array of 4 double (i,j,k,w)");
+      RCLCPP_ERROR_STREAM(logger_,"quaternion should be an array of 4 double (i,j,k,w)");
       return false;
     }
 
@@ -128,13 +171,13 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
     try {
       position = yaml_node["position"].as<std::vector<double>>();
     } catch (const YAML::BadConversion& e) {
-      CNR_ERROR(logger_,"position should be an array of 3 double (x,y,z)");
+      RCLCPP_ERROR_STREAM(logger_,"position should be an array of 3 double (x,y,z)");
       return false;
     }
 
     if(position.size() != 3)
     {
-      CNR_ERROR(logger_,"position should be an array of 3 double (x,y,z)");
+      RCLCPP_ERROR_STREAM(logger_,"position should be an array of 3 double (x,y,z)");
       return false;
     }
 
@@ -155,7 +198,7 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
     try {
       path = yaml_node["mesh"].as<std::string>();
     } catch (const YAML::BadConversion& e) {
-      CNR_ERROR(logger_,"mash has to be a string (path to mesh)");
+      RCLCPP_ERROR_STREAM(logger_,"mash has to be a string (path to mesh)");
       return false;
     }
 
@@ -166,13 +209,13 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
       try {
         scale_v = yaml_node["scale"].as<std::vector<double>>();
       } catch (const YAML::BadConversion& e) {
-        CNR_ERROR(logger_,"scale should be an array of 3 double");
+        RCLCPP_ERROR_STREAM(logger_,"scale should be an array of 3 double");
         return false;
       }
 
       if(scale_v.size() != 3)
       {
-        CNR_ERROR(logger_,"scale should be an array of 3 double");
+        RCLCPP_ERROR_STREAM(logger_,"scale should be an array of 3 double");
         return false;
       }
       scale(0)=scale_v.at(0);
@@ -196,13 +239,13 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
     try {
       size = yaml_node["box"].as<std::vector<double>>();
     } catch (const YAML::BadConversion& e) {
-      CNR_ERROR(logger_,"box should be an array of 3 double");
+      RCLCPP_ERROR_STREAM(logger_,"box should be an array of 3 double");
       return false;
     }
 
     if(size.size() != 3)
     {
-      CNR_ERROR(logger_,"box should be an array of 3 double");
+      RCLCPP_ERROR_STREAM(logger_,"box should be an array of 3 double");
       return false;
     }
 
@@ -220,7 +263,7 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
     try {
       radius = yaml_node["sphere"].as<double>();
     } catch (const YAML::BadConversion& e) {
-      CNR_ERROR(logger_,"sphere should be one double representing the radius");
+      RCLCPP_ERROR_STREAM(logger_,"sphere should be one double representing the radius");
       return false;
     }
 
@@ -236,13 +279,13 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
     try {
       size = yaml_node["cylinder"].as<std::vector<double>>();
     } catch (const YAML::BadConversion& e) {
-      CNR_ERROR(logger_,"cylinder should be an array of 2 double");
+      RCLCPP_ERROR_STREAM(logger_,"cylinder should be an array of 2 double");
       return false;
     }
 
     if(size.size() != 2)
     {
-      CNR_ERROR(logger_,"cylinder should be an array of 2 double");
+      RCLCPP_ERROR_STREAM(logger_,"cylinder should be an array of 2 double");
       return false;
     }
 
@@ -259,13 +302,13 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
     try {
       size = yaml_node["cone"].as<std::vector<double>>();
     } catch (const YAML::BadConversion& e) {
-      CNR_ERROR(logger_,"cone should be an array of 2 double");
+      RCLCPP_ERROR_STREAM(logger_,"cone should be an array of 2 double");
       return false;
     }
 
     if(size.size() != 2)
     {
-      CNR_ERROR(logger_,"cone should be an array of 2 double");
+      RCLCPP_ERROR_STREAM(logger_,"cone should be an array of 2 double");
       return false;
     }
 
@@ -278,14 +321,14 @@ bool register_type(const YAML::Node& yaml_node, const std::string& id, registere
   }
   else
   {
-    CNR_ERROR(logger_,"Object geometry not recognized");
+    RCLCPP_ERROR_STREAM(logger_,"Object geometry not recognized");
     return false;
   }
 }
 
 /**
  * @brief register_object_types registers the object types listed under the param_ns/OBJS_NS parameter
- * @param param_ns the cnr::param namespace under which OBJS_NS is defined
+ * @param param_ns the namespace (inside the scene file) under which OBJS_NS is defined
  * @return true if everything went well, false otherwise
  */
 bool register_object_types(const std::string& param_ns)
@@ -296,22 +339,16 @@ bool register_object_types(const std::string& param_ns)
   std::string text = "REGISTERING OBJECT TYPES FROM "+ns;
   std::string header = "=========================================================================================";
 
-  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header<<cnr_logger::RESET());
-  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<std::setw((header.length()-text.length())/2+text.length())<<text<<cnr_logger::RESET());
-  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header<<cnr_logger::RESET()<<cnr_logger::RESET());
+  RCLCPP_INFO_STREAM(logger_,header);
+  RCLCPP_INFO_STREAM(logger_,std::setw((header.length()-text.length())/2+text.length())<<text);
+  RCLCPP_INFO_STREAM(logger_,header);
 
-  if(cnr::param::has(ns,w))
+  YAML::Node objects_geometries;
+  if(get_config_node(ns,objects_geometries,w))
   {
-    YAML::Node objects_geometries;
-    if(not cnr::param::get(ns,objects_geometries,w))
-    {
-      CNR_ERROR(logger_, "Cannot get objects geometries "<<ns<<"\n"<<w);
-      return false;
-    }
-
     if(not objects_geometries.IsMap())
     {
-      CNR_ERROR(logger_, ns<<" has type "<<objects_geometries.Type()<<", while it should be a map (type "<<YAML::NodeType::Map<<")");
+      RCLCPP_ERROR_STREAM(logger_, ns<<" has type "<<objects_geometries.Type()<<", while it should be a map (type "<<YAML::NodeType::Map<<")");
       return false;
     }
 
@@ -328,19 +365,18 @@ bool register_object_types(const std::string& param_ns)
         registered_object_types_.insert(std::pair<std::string,registered_object_t>(r_obj.obj_.id_,r_obj));
 
         if(registered_object_types_.size() == dim)
-          CNR_WARN(logger_, "Cannot add multiple objects with ID: "<<id);
+          RCLCPP_WARN_STREAM(logger_, "Cannot add multiple objects with ID: "<<id);
         else
-          CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::G()<<"\t- "<<cnr_logger::W()<<id
-                   <<cnr_logger::RESET()<<cnr_logger::G()<<" registered"<<cnr_logger::RESET());
+          RCLCPP_INFO_STREAM(logger_,"\t- "<<id<<" registered");
       }
       else
-        CNR_ERROR(logger_, "Cannot register object with ID: "<<id);
+        RCLCPP_ERROR_STREAM(logger_, "Cannot register object with ID: "<<id);
     }
-    CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header<<cnr_logger::RESET());
+    RCLCPP_INFO_STREAM(logger_,header);
   }
   else
   {
-    CNR_ERROR(logger_, ns<<" not available\n"<<w);
+    RCLCPP_ERROR_STREAM(logger_, ns<<" not available\n"<<w);
     return false;
   }
 
@@ -420,20 +456,20 @@ bool load_scene_obj(const YAML::Node& yaml_node, object_t& obj, color_t& color)
     try {
       type = yaml_node["type"].as<std::string>();
     } catch (const YAML::BadConversion& e) {
-      CNR_ERROR(logger_,"type field should be a string");
+      RCLCPP_ERROR_STREAM(logger_,"type field should be a string");
       return false;
     }
   }
   else
   {
-    CNR_ERROR(logger_,"Each object to load into the scene should have the 'type' field");
+    RCLCPP_ERROR_STREAM(logger_,"Each object to load into the scene should have the 'type' field");
     return false;
   }
 
   std::map<std::string,registered_object_t>::iterator it = registered_object_types_.find(type);
   if(it==registered_object_types_.end())
   {
-    CNR_ERROR(logger_,"Object type %s not registered",type.c_str());
+    RCLCPP_ERROR_STREAM(logger_,"Object type "<<type<<" not registered");
     return false;
   }
 
@@ -445,13 +481,13 @@ bool load_scene_obj(const YAML::Node& yaml_node, object_t& obj, color_t& color)
     try {
       reference_frame = yaml_node["frame"].as<std::string>();
     } catch (const YAML::BadConversion& e) {
-      CNR_ERROR(logger_,"frame field should be a string");
+      RCLCPP_ERROR_STREAM(logger_,"frame field should be a string");
       return false;
     }
   }
   else
   {
-    CNR_ERROR(logger_,"Each object to load into the scene should have the 'frame' field");
+    RCLCPP_ERROR_STREAM(logger_,"Each object to load into the scene should have the 'frame' field");
     return false;
   }
 
@@ -461,19 +497,19 @@ bool load_scene_obj(const YAML::Node& yaml_node, object_t& obj, color_t& color)
     try {
       position = yaml_node["position"].as<std::vector<double>>();
     } catch (const YAML::BadConversion& e) {
-      CNR_ERROR(logger_,"position field should be a vector of 3 double (x,y,z)");
+      RCLCPP_ERROR_STREAM(logger_,"position field should be a vector of 3 double (x,y,z)");
       return false;
     }
 
     if(position.size() != 3)
     {
-      CNR_ERROR(logger_,"position field should be a vector of 3 double (x,y,z)");
+      RCLCPP_ERROR_STREAM(logger_,"position field should be a vector of 3 double (x,y,z)");
       return false;
     }
   }
   else
   {
-    CNR_ERROR(logger_,"Each object to load into the scene should have the 'position' field");
+    RCLCPP_ERROR_STREAM(logger_,"Each object to load into the scene should have the 'position' field");
     return false;
   }
 
@@ -483,19 +519,19 @@ bool load_scene_obj(const YAML::Node& yaml_node, object_t& obj, color_t& color)
     try {
       quaternion = yaml_node["quaternion"].as<std::vector<double>>();
     } catch (const YAML::BadConversion& e) {
-      CNR_ERROR(logger_,"quaternion field should be a vector of 4 double (i,j,k,w)");
+      RCLCPP_ERROR_STREAM(logger_,"quaternion field should be a vector of 4 double (i,j,k,w)");
       return false;
     }
 
     if(quaternion.size() != 4)
     {
-      CNR_ERROR(logger_,"quaternion field should be a vector of 4 double (i,j,k,w)");
+      RCLCPP_ERROR_STREAM(logger_,"quaternion field should be a vector of 4 double (i,j,k,w)");
       return false;
     }
   }
   else
   {
-    CNR_ERROR(logger_,"Each object to load into the scene should have the 'quaternion' field");
+    RCLCPP_ERROR_STREAM(logger_,"Each object to load into the scene should have the 'quaternion' field");
     return false;
   }
 
@@ -513,7 +549,7 @@ bool load_scene_obj(const YAML::Node& yaml_node, object_t& obj, color_t& color)
 
 /**
  * @brief load_scene loads the objects listed under the param_ns/SCENE_NS parameter
- * @param param_ns the cnr::param namespace under which SCENE_NS is defined
+ * @param param_ns the namespace (inside the scene file) under which SCENE_NS is defined
  * @return true if everything went well, false otherwise
  */
 bool load_scene(const std::string& param_ns)
@@ -523,22 +559,16 @@ bool load_scene(const std::string& param_ns)
   std::string text = "LOADING SCENE OBJECTS FROM "+ns;
   std::string header = "=========================================================================================";
 
-  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header<<cnr_logger::RESET());
-  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<std::setw((header.length()-text.length())/2+text.length())<<text<<cnr_logger::RESET());
-  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header<<cnr_logger::RESET());
+  RCLCPP_INFO_STREAM(logger_,header);
+  RCLCPP_INFO_STREAM(logger_,std::setw((header.length()-text.length())/2+text.length())<<text);
+  RCLCPP_INFO_STREAM(logger_,header);
 
-  if(cnr::param::has(ns,what))
+  YAML::Node scene;
+  if(get_config_node(ns,scene,what))
   {
-    YAML::Node scene;
-    if(not cnr::param::get(ns,scene,what))
-    {
-      CNR_ERROR(logger_, "Cannot get scene "<<ns<<"\n"<<what);
-      return false;
-    }
-
     if(not scene.IsSequence())
     {
-      CNR_ERROR(logger_, ns<<" has type "<<scene.Type()<<", while it should be a sequence (type "<<YAML::NodeType::Sequence<<")");
+      RCLCPP_ERROR_STREAM(logger_, ns<<" has type "<<scene.Type()<<", while it should be a sequence (type "<<YAML::NodeType::Sequence<<")");
       return false;
     }
 
@@ -552,23 +582,22 @@ bool load_scene(const std::string& param_ns)
       {
         colors.push_back(std::move(color));
         scene_objs.emplace_back(scene_obj);
-        CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::G()<<"\t- "<<cnr_logger::W()<<scene_objs.back().id
-                 <<cnr_logger::RESET()<<cnr_logger::G()<<" loaded"<<cnr_logger::RESET());
+        RCLCPP_INFO_STREAM(logger_,"\t- "<<scene_objs.back().id<<" loaded");
       }
       else
-        CNR_ERROR(logger_,cnr_logger::RESET()<<"Cannot load the "<<std::distance(scene.begin(),it)<<"-th object into the scene"<<cnr_logger::RESET());
+        RCLCPP_ERROR_STREAM(logger_,"Cannot load the "<<std::distance(scene.begin(),it)<<"-th object into the scene");
     }
-    CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BG()<<header<<cnr_logger::RESET());
+    RCLCPP_INFO_STREAM(logger_,header);
 
     if(not scene_manager_->addNamedTFObjects(scene_objs,10.0,colors,what))
     {
-      CNR_ERROR(logger_,"Error in adding the objects to the scene\n%s", what.c_str());
+      RCLCPP_ERROR_STREAM(logger_,"Error in adding the objects to the scene\n"<<what);
       return false;
     }
   }
   else
   {
-    CNR_ERROR(logger_, ns<<" not available\n"<<what);
+    RCLCPP_ERROR_STREAM(logger_, ns<<" not available\n"<<what);
     return false;
   }
   return true;
@@ -584,9 +613,9 @@ void add_obj(const std::shared_ptr<cnr_scene_manager_msgs::srv::AddObjects::Requ
              std::shared_ptr<cnr_scene_manager_msgs::srv::AddObjects::Response> res)
 {
 
-  CNR_INFO(logger_,"=================================================================");
-  CNR_INFO(logger_,"===               ADD OBJECTS REQUEST RECEIVED!               ===");
-  CNR_INFO(logger_,"=================================================================");
+  RCLCPP_INFO_STREAM(logger_,"=================================================================");
+  RCLCPP_INFO_STREAM(logger_,"===               ADD OBJECTS REQUEST RECEIVED!               ===");
+  RCLCPP_INFO_STREAM(logger_,"=================================================================");
 
   res->ids.resize(req->objects.size());
 
@@ -600,7 +629,7 @@ void add_obj(const std::shared_ptr<cnr_scene_manager_msgs::srv::AddObjects::Requ
     it = registered_object_types_.find(req->objects[i].object_type);
     if(it==registered_object_types_.end())
     {
-      CNR_ERROR(logger_,"Object type %s not registered",req->objects[i].object_type.c_str());
+      RCLCPP_ERROR_STREAM(logger_,"Object type "<<req->objects[i].object_type<<" not registered");
       res->success = false;
       return;
     }
@@ -617,7 +646,7 @@ void add_obj(const std::shared_ptr<cnr_scene_manager_msgs::srv::AddObjects::Requ
     }
     else
     {
-      CNR_ERROR(logger_,"Object type %s cannot be instantiated",req->objects[i].object_type.c_str());
+      RCLCPP_ERROR_STREAM(logger_,"Object type "<<req->objects[i].object_type<<" cannot be instantiated");
       res->success = false;
       return;
     }
@@ -629,7 +658,7 @@ void add_obj(const std::shared_ptr<cnr_scene_manager_msgs::srv::AddObjects::Requ
 
   if(not scene_manager_->addNamedTFObjects(objs_to_add,timeout,colors,what))
   {
-    CNR_ERROR(logger_,"Error in adding the objects to the scene\n%s", what.c_str());
+    RCLCPP_ERROR_STREAM(logger_,"Error in adding the objects to the scene\n"<<what);
     res->success = false;
     return;
   }
@@ -647,13 +676,13 @@ void add_obj(const std::shared_ptr<cnr_scene_manager_msgs::srv::AddObjects::Requ
 void move_obj(const std::shared_ptr<cnr_scene_manager_msgs::srv::MoveObjects::Request> req,
              std::shared_ptr<cnr_scene_manager_msgs::srv::MoveObjects::Response> res)
 {
-//  CNR_INFO(logger_,"=================================================================");
-//  CNR_INFO(logger_,"===               MOVE OBJECTS REQUEST RECEIVED!              ===");
-//  CNR_INFO(logger_,"=================================================================");
+//  RCLCPP_INFO_STREAM(logger_,"=================================================================");
+//  RCLCPP_INFO_STREAM(logger_,"===               MOVE OBJECTS REQUEST RECEIVED!              ===");
+//  RCLCPP_INFO_STREAM(logger_,"=================================================================");
 
   if(req->obj_ids.size() != req->poses.size())
   {
-    CNR_ERROR(logger_, "req->obj_id size should be euqal to req->poses size, but they are %u and %u",req->obj_ids.size(),req->poses.size());
+    RCLCPP_ERROR_STREAM(logger_, "req->obj_ids size should be equal to req->poses size, but they are "<<req->obj_ids.size()<<" and "<<req->poses.size());
     res->success = false;
     return;
   }
@@ -675,7 +704,7 @@ void move_obj(const std::shared_ptr<cnr_scene_manager_msgs::srv::MoveObjects::Re
       registered_obj_key = id.substr(0, pos);
     else
     {
-      CNR_ERROR(logger_,"id not valid, it should be like registered_type/n_XXX");
+      RCLCPP_ERROR_STREAM(logger_,"id not valid, it should be like registered_type/n_XXX");
       res->success = false;
       return;
     }
@@ -683,7 +712,7 @@ void move_obj(const std::shared_ptr<cnr_scene_manager_msgs::srv::MoveObjects::Re
     auto it = registered_object_types_.find(registered_obj_key);
     if(it == registered_object_types_.end())
     {
-      CNR_ERROR(logger_,"id not associated to a registered object type");
+      RCLCPP_ERROR_STREAM(logger_,"id not associated to a registered object type");
       res->success = false;
       return;
     }
@@ -714,7 +743,7 @@ void move_obj(const std::shared_ptr<cnr_scene_manager_msgs::srv::MoveObjects::Re
   std::string what;
   if(not scene_manager_->moveNamedTFObjects(pose_map,color_map,timeout,what))
   {
-    CNR_ERROR(logger_,"Error in moving the objects in the scene\n%s", what.c_str());
+    RCLCPP_ERROR_STREAM(logger_,"Error in moving the objects in the scene\n"<<what);
     res->success = false;
     return;
   }
@@ -726,9 +755,9 @@ void move_obj(const std::shared_ptr<cnr_scene_manager_msgs::srv::MoveObjects::Re
 void remove_obj(const std::shared_ptr<cnr_scene_manager_msgs::srv::RemoveObjects::Request> req,
                 std::shared_ptr<cnr_scene_manager_msgs::srv::RemoveObjects::Response> res)
 {
-  CNR_INFO(logger_,"=================================================================");
-  CNR_INFO(logger_,"==             REMOVE OBJECTS REQUEST RECEIVED!               ===");
-  CNR_INFO(logger_,"=================================================================");
+  RCLCPP_INFO_STREAM(logger_,"=================================================================");
+  RCLCPP_INFO_STREAM(logger_,"==             REMOVE OBJECTS REQUEST RECEIVED!               ===");
+  RCLCPP_INFO_STREAM(logger_,"=================================================================");
 
   double timeout = 0.01;
   if(req->timeout)
@@ -739,7 +768,7 @@ void remove_obj(const std::shared_ptr<cnr_scene_manager_msgs::srv::RemoveObjects
   {
     if(not scene_manager_->resetScene(timeout,what))
     {
-      CNR_ERROR(logger_,"Error in resetting the scene\n%s", what.c_str());
+      RCLCPP_ERROR_STREAM(logger_,"Error in resetting the scene\n"<<what);
       res->success = false;
       return;
     }
@@ -748,7 +777,7 @@ void remove_obj(const std::shared_ptr<cnr_scene_manager_msgs::srv::RemoveObjects
   {
     if(not scene_manager_->removeNamedObjects(req->obj_ids,timeout,what))
     {
-      CNR_ERROR(logger_,"Error in removing the objects from the scene\n%s", what.c_str());
+      RCLCPP_ERROR_STREAM(logger_,"Error in removing the objects from the scene\n"<<what);
       res->success = false;
       return;
     }
@@ -766,27 +795,33 @@ int main(int argc, char** argv)
   rclcpp::executors::MultiThreadedExecutor executor;
   executor.add_node(node);
 
-  std::string package_name = "cnr_scene_manager";
-  std::string package_path = ament_index_cpp::get_package_share_directory(package_name);
+  logger_ = node->get_logger();
 
-  if(package_path.empty())
-    throw std::invalid_argument("Failed to get path for package!");
+  // scene_file: yaml file with object geometries and scene objects (default: the example config/scene.yaml)
+  std::string default_scene_file = ament_index_cpp::get_package_share_directory("cnr_scene_manager")+"/config/scene.yaml";
+  std::string scene_file = node->declare_parameter<std::string>("scene_file", default_scene_file);
 
-  std::string logger_file = package_path+"/config/logger_param.yaml";
-  logger_ = std::make_shared<cnr_logger::TraceLogger>("cnr_scene_manager_logger",logger_file);
+  // param_ns: namespace inside scene_file under which object_geometries and scene_objects are defined
+  std::string param_ns = node->declare_parameter<std::string>("param_ns", "");
 
-  std::string param_ns;
-  node->declare_parameter("param_ns", "");
-  node->get_parameter("param_ns", param_ns);
+  try
+  {
+    config_ = YAML::LoadFile(scene_file);
+  }
+  catch(const YAML::Exception& e)
+  {
+    RCLCPP_ERROR_STREAM(logger_,"Cannot load scene file "<<scene_file<<"\n"<<e.what());
+    rclcpp::shutdown();
+    return 1;
+  }
 
-  CNR_INFO(logger_,cnr_logger::RESET()<<cnr_logger::BY()<<
-           "Scene objects read under param namespace: "<<param_ns<<cnr_logger::RESET());
+  RCLCPP_INFO_STREAM(logger_,"Scene objects read from "<<scene_file<<" under namespace: "<<param_ns);
 
   // Register the available object types listed under param_ns/OBJS_NS parameter
   scene_manager_.reset(new TFNamedObjectsManager(node));
   if(not register_object_types(param_ns))
   {
-    CNR_ERROR(logger_,"Cannot register object types");
+    RCLCPP_ERROR_STREAM(logger_,"Cannot register object types");
     rclcpp::shutdown();
     return 1;
   }
@@ -794,20 +829,20 @@ int main(int argc, char** argv)
   // Load the scene objects listed under param_ns/SCENE_NS parameter
   if(not load_scene(param_ns))
   {
-    CNR_ERROR(logger_,"Cannot load scene objects");
+    RCLCPP_ERROR_STREAM(logger_,"Cannot load scene objects");
     rclcpp::shutdown();
     return 1;
   }
 
   // Declare services
   auto add_service = node->create_service<cnr_scene_manager_msgs::srv::AddObjects>(ADD_OBJ_SERVICE, &add_obj);
-  CNR_INFO(logger_, "Ready to add objects to the scene");
+  RCLCPP_INFO_STREAM(logger_, "Ready to add objects to the scene");
 
   auto move_service = node->create_service<cnr_scene_manager_msgs::srv::MoveObjects>(MOVE_OBJ_SERVICE, &move_obj);
-  CNR_INFO(logger_, "Ready to move objects in the scene");
+  RCLCPP_INFO_STREAM(logger_, "Ready to move objects in the scene");
 
   auto remove_service = node->create_service<cnr_scene_manager_msgs::srv::RemoveObjects>(REMOVE_OBJ_SERVICE, &remove_obj);
-  CNR_INFO(logger_, "Ready to remove objects from the scene");
+  RCLCPP_INFO_STREAM(logger_, "Ready to remove objects from the scene");
 
   rclcpp::WallRate loop_rate(1000);
   while(rclcpp::ok())
