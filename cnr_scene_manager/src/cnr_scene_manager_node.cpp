@@ -851,6 +851,9 @@ int main(int argc, char** argv)
     loop_rate.sleep();
   }
 
+  // Stop the threads that publish the TF of the objects while the node is still valid
+  // (scene_manager_ is global: otherwise it is destroyed after main, with the threads still running)
+  scene_manager_.reset();
   rclcpp::shutdown();
 
   return 0;
